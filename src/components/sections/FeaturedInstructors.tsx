@@ -1,18 +1,20 @@
 import { useFadeInOnScroll } from "@/hooks/useFadeInOnScroll";
+import rosarioImg from "/src/assets/images/instructors/rosario.jpg";
+import alferImg from "/src/assets/images/instructors/alfer.jpg";
 
 const instructors = [
   {
     name: "Alfer Tangol",
     craft: "Pottery Artist",
     description: "10+ years shaping functional and decorative ceramics.",
-    image: "/src/assets/images/instructors/alfer.jpg",
+    image: alferImg,
   },
   {
     name: "Rosario Bautista",
     craft: "Traditional Handwoven Buntal Weaving",
     description:
       "Expert in crafting beautiful buntal products using age-old techniques.",
-    image: "/src/assets/images/instructors/rosario.jpg",
+    image: rosarioImg,
   },
   {
     name: "Juan Dela Cruz",
