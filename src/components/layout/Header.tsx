@@ -1,34 +1,64 @@
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 
 const Header = () => {
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => {
+      setScrolled(window.scrollY > 50);
+    };
+
+    window.addEventListener("scroll", onScroll);
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   return (
-    <header className="fixed top-0 left-0 w-full z-50">
-      <nav className="flex items-center justify-between px-8 py-4 bg-transparent">
+    <header
+      className={`fixed top-0 w-full z-50 transition-all duration-300
+        ${scrolled ? "bg-white shadow-sm" : "bg-transparent"}
+      `}
+    >
+      <div className="max-w-7xl mx-auto px-8 h-20 flex items-center justify-between">
         {/* Logo */}
-        <div className="flex items-center gap-2">
-          <div className="h-10 w-10 rounded-full bg-green-600 flex items-center justify-center font-bold">
-            KV
-          </div>
-          <span className="text-xl font-semibold tracking-wide">
+        <div className="flex items-center gap-2 font-bold text-lg">
+          <span className="text-green-600">🌿</span>
+          <span className={scrolled ? "text-gray-900" : "text-white"}>
             Kultoura Verde
           </span>
         </div>
 
-        {/* Navigation */}
-        <ul className="hidden md:flex items-center gap-8 text-lg font-medium">
-          <li className="hover:text-green-400 transition">Home</li>
-          <li className="hover:text-green-400 transition">Services</li>
-          <li className="hover:text-green-400 transition">Contact Us</li>
-        </ul>
+        {/* Nav */}
+        <nav className="hidden md:flex items-center gap-8 text-sm font-medium">
+          {["Home", "Services", "Contact Us"].map((item) => (
+            <a
+              key={item}
+              href="#"
+              className={`transition-colors
+                ${
+                  scrolled
+                    ? "text-gray-700 hover:text-green-600"
+                    : "text-white/90 hover:text-white"
+                }
+              `}
+            >
+              {item}
+            </a>
+          ))}
+        </nav>
 
-        {/* Login Button */}
+        {/* Login */}
         <Button
-          variant="outline"
-          className="border-white text-white hover:bg-white hover:text-black"
+          variant={scrolled ? "default" : "secondary"}
+          className={
+            scrolled
+              ? "bg-green-600 text-white hover:bg-green-700"
+              : "bg-white text-green-700 hover:bg-gray-100"
+          }
         >
           Login
         </Button>
-      </nav>
+      </div>
     </header>
   );
 };
