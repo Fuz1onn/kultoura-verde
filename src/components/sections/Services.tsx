@@ -1,29 +1,25 @@
 import { useFadeInOnScroll } from "@/hooks/useFadeInOnScroll";
-import localCuisineImg from "../../assets/images/services/localcuisine.jpeg";
-import weavingImg from "../../assets/images/services/weaving.jpg";
-import farmingImg from "../../assets/images/services/farming.jpg";
-import potteryImg from "../../assets/images/services/pottery.jpg";
 
 const services = [
   {
     title: "Pottery",
     description: "Shape clay and create functional art with skilled artisans.",
-    image: potteryImg,
+    image: "/images/services/pottery.jpg",
   },
   {
     title: "Farming",
     description: "Learn hands-on farming practices from local growers.",
-    image: farmingImg,
+    image: "/images/services/farming.jpg",
   },
   {
     title: "Weaving",
     description: "Discover the beauty of handwoven textiles and patterns.",
-    image: weavingImg,
+    image: "/images/services/weaving.jpg",
   },
   {
     title: "Local Cuisine Making",
     description: "Cook traditional local dishes with experienced home chefs.",
-    image: localCuisineImg,
+    image: "/images/services/localcuisine.jpeg",
   },
 ];
 
