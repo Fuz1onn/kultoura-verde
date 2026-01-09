@@ -1,6 +1,6 @@
 import { useFadeInOnScroll } from "@/hooks/useFadeInOnScroll";
-import rosarioImg from "/src/assets/images/instructors/rosario.jpg";
-import alferImg from "/src/assets/images/instructors/alfer.jpg";
+import rosarioImg from "../../assets/images/instructors/rosario.jpg";
+import alferImg from "../../assets/images/instructors/alfer.jpg";
 
 const instructors = [
   {

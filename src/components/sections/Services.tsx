@@ -1,8 +1,8 @@
 import { useFadeInOnScroll } from "@/hooks/useFadeInOnScroll";
-import localCuisineImg from "/src/assets/images/services/localcuisine.jpeg";
-import weavingImg from "/src/assets/images/services/weaving.jpg";
-import farmingImg from "/src/assets/images/services/farming.jpg";
-import potteryImg from "/src/assets/images/services/pottery.jpg";
+import localCuisineImg from "../../assets/images/services/localcuisine.jpeg";
+import weavingImg from "../../assets/images/services/weaving.jpg";
+import farmingImg from "../../assets/images/services/farming.jpg";
+import potteryImg from "../../assets/images/services/pottery.jpg";
 
 const services = [
   {
