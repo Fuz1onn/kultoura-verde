@@ -10,6 +10,13 @@ const services = [
 const Hero = () => {
   return (
     <section className="relative min-h-screen flex items-center">
+      {/* Background Image */}
+      <img
+        src="/images/background.jpg"
+        alt="Cultural craftsmanship"
+        className="absolute inset-0 w-full h-full object-cover object-[50%_20%]"
+      />
+
       {/* Overlay */}
       <div className="absolute inset-0 bg-black/50" />
 
