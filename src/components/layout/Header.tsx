@@ -22,10 +22,11 @@ const Header = () => {
       <div className="max-w-7xl mx-auto px-8 h-20 flex items-center justify-between">
         {/* Logo */}
         <div className="flex items-center gap-2 font-bold text-lg">
-          <span className="text-green-600">🌿</span>
-          <span className={scrolled ? "text-gray-900" : "text-white"}>
-            Kultoura Verde
-          </span>
+          <img
+            src={scrolled ? "/images/logo-green.svg" : "/images/logo-white.svg"}
+            alt="Kultoura Verde"
+            className="h-48 transition-opacity duration-300"
+          />
         </div>
 
         {/* Nav */}

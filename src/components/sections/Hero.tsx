@@ -21,7 +21,7 @@ const Hero = () => {
       <div className="absolute inset-0 bg-black/50" />
 
       <div className="relative z-10 max-w-5xl px-8">
-        <h1 className="text-4xl md:text-6xl font-bold leading-tight">
+        <h1 className="text-4xl md:text-5xl font-bold leading-tight">
           Learn Cultural Craftsmanship
           <br />
           from Local Artisans
