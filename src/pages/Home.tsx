@@ -1,4 +1,3 @@
-import FeaturedInstructors from "@/components/sections/FeaturedInstructors";
 import Hero from "@/components/sections/Hero";
 import HowItWorks from "@/components/sections/HowItWorks";
 import Services from "@/components/sections/Services";
@@ -12,7 +11,6 @@ const Home = () => {
       <Hero />
       <HowItWorks />
       <Services />
-      <FeaturedInstructors />
       <WhyKultouraVerde />
       <ContactUs />
       <FinalCTA />
