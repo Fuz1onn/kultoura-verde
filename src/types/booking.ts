@@ -22,7 +22,7 @@ export type Booking = {
   dateISO: string; // YYYY-MM-DD
   timeLabel: string;
 
-  transport: TransportOption;
+  transport?: TransportOption;
   pickupNotes?: string;
 
   driver: "to_be_assigned" | string; // placeholder for later

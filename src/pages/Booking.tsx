@@ -4,7 +4,11 @@ import { useMemo, useState } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { addBooking } from "@/lib/bookingsStore";
-import type { Booking as BookingType, TransportOption } from "@/types/booking";
+import type {
+  Booking as BookingType,
+  TransportOption,
+  TourAddOns,
+} from "@/types/booking";
 
 const serviceMap: Record<string, string> = {
   pottery: "Pottery Making",
@@ -43,6 +47,12 @@ export default function Booking() {
   // Transportation (required selection)
   const [transport, setTransport] = useState<TransportOption | null>(null);
   const [pickupNotes, setPickupNotes] = useState<string>("");
+
+  // Optional tour add-ons
+  const [addOns, setAddOns] = useState<TourAddOns>({
+    placesToEat: false,
+    pasalubongCenter: false,
+  });
 
   const isValid = useMemo(
     () => Boolean(serviceName && instructorName),
@@ -223,6 +233,103 @@ export default function Booking() {
             </div>
           </div>
 
+          {/* Optional Tour Add-ons */}
+          <div className="mb-10">
+            <h2 className="text-lg font-medium mb-2">Optional Tour Add-ons</h2>
+            <p className="text-sm text-gray-600 mb-4">
+              Add quick stops to enhance your experience (optional).
+            </p>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={() =>
+                  setAddOns((prev) => ({
+                    ...prev,
+                    placesToEat: !prev.placesToEat,
+                  }))
+                }
+                className={`rounded-xl border px-4 py-3 text-left transition
+                  ${
+                    addOns.placesToEat
+                      ? "border-green-600 bg-green-50"
+                      : "hover:border-green-600 hover:bg-gray-50"
+                  }`}
+              >
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <div className="font-medium text-gray-900">
+                      Places to Eat
+                    </div>
+                    <div className="mt-1 text-xs text-gray-600">
+                      Get recommendations and optional stops for local food
+                      spots.
+                    </div>
+                  </div>
+                  <span
+                    className={`text-xs font-medium rounded-full px-2 py-1 ${
+                      addOns.placesToEat
+                        ? "bg-green-600 text-white"
+                        : "bg-gray-100 text-gray-700"
+                    }`}
+                  >
+                    {addOns.placesToEat ? "Added" : "Add"}
+                  </span>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setAddOns((prev) => ({
+                    ...prev,
+                    pasalubongCenter: !prev.pasalubongCenter,
+                  }))
+                }
+                className={`rounded-xl border px-4 py-3 text-left transition
+                  ${
+                    addOns.pasalubongCenter
+                      ? "border-green-600 bg-green-50"
+                      : "hover:border-green-600 hover:bg-gray-50"
+                  }`}
+              >
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <div className="font-medium text-gray-900">
+                      Pasalubong Center
+                    </div>
+                    <div className="mt-1 text-xs text-gray-600">
+                      Optional stop for souvenirs and local delicacies.
+                    </div>
+                  </div>
+                  <span
+                    className={`text-xs font-medium rounded-full px-2 py-1 ${
+                      addOns.pasalubongCenter
+                        ? "bg-green-600 text-white"
+                        : "bg-gray-100 text-gray-700"
+                    }`}
+                  >
+                    {addOns.pasalubongCenter ? "Added" : "Add"}
+                  </span>
+                </div>
+              </button>
+            </div>
+
+            {(addOns.placesToEat || addOns.pasalubongCenter) && (
+              <p className="mt-3 text-xs text-gray-500">
+                Selected add-ons:{" "}
+                <span className="text-gray-800 font-medium">
+                  {[
+                    addOns.placesToEat ? "Places to Eat" : null,
+                    addOns.pasalubongCenter ? "Pasalubong Center" : null,
+                  ]
+                    .filter(Boolean)
+                    .join(", ")}
+                </span>
+              </p>
+            )}
+          </div>
+
           {/* CTA */}
           <Button
             size="lg"
@@ -247,6 +354,10 @@ export default function Booking() {
                 transport: transport!,
                 pickupNotes: pickupNotes.trim() || undefined,
                 driver: "to_be_assigned",
+                addOns: {
+                  placesToEat: addOns.placesToEat,
+                  pasalubongCenter: addOns.pasalubongCenter,
+                },
               };
 
               addBooking(booking);
