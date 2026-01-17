@@ -3,6 +3,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useMemo, useState } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
+import { addBooking } from "@/lib/bookingsStore";
+import type { Booking as BookingType, TransportOption } from "@/types/booking";
 
 const serviceMap: Record<string, string> = {
   pottery: "Pottery Making",
@@ -28,8 +30,6 @@ const instructorNameMap: Record<string, string> = {
 
 const timeSlots = ["09:00 AM", "11:00 AM", "01:00 PM", "03:00 PM", "05:00 PM"];
 
-type TransportOption = "jeepney" | "tricycle" | "van";
-
 export default function Booking() {
   const navigate = useNavigate();
   const { serviceId, instructorId } = useParams();
@@ -46,7 +46,7 @@ export default function Booking() {
 
   const isValid = useMemo(
     () => Boolean(serviceName && instructorName),
-    [serviceName, instructorName]
+    [serviceName, instructorName],
   );
 
   if (!isValid) {
@@ -69,10 +69,10 @@ export default function Booking() {
     transport === "jeepney"
       ? "Jeepney"
       : transport === "tricycle"
-      ? "Tricycle"
-      : transport === "van"
-      ? "Van"
-      : "";
+        ? "Tricycle"
+        : transport === "van"
+          ? "Van"
+          : "";
 
   const canSubmit = Boolean(date && time && transport);
 
@@ -229,14 +229,29 @@ export default function Booking() {
             disabled={!canSubmit}
             className="w-full md:w-auto bg-green-600 text-white hover:bg-green-700"
             onClick={() => {
-              console.log({
-                serviceId,
-                instructorId,
-                date,
-                time,
-                transport,
-                pickupNotes,
+              const dateISO = date!.toISOString().slice(0, 10);
+
+              const booking: BookingType = {
+                id:
+                  typeof crypto !== "undefined" && "randomUUID" in crypto
+                    ? crypto.randomUUID()
+                    : `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+                createdAt: new Date().toISOString(),
+                status: "pending",
+                serviceId: serviceId!,
+                serviceName,
+                instructorId: instructorId!,
+                instructorName,
+                dateISO,
+                timeLabel: time!,
+                transport: transport!,
+                pickupNotes: pickupNotes.trim() || undefined,
                 driver: "to_be_assigned",
+              };
+
+              addBooking(booking);
+              navigate(`/booking/requested/${booking.id}`, {
+                state: { booking },
               });
             }}
           >

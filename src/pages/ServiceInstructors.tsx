@@ -2,6 +2,7 @@
 import { useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/context/useAuth";
 
 type Instructor = {
   id: string;
@@ -154,11 +155,12 @@ const instructorsByService: Record<string, Instructor[]> = {
 export default function ServiceInstructors() {
   const navigate = useNavigate();
   const { serviceId } = useParams();
+  const { user } = useAuth();
 
   const service = serviceMap[serviceId ?? ""];
   const instructors = useMemo(
     () => instructorsByService[serviceId ?? ""] ?? [],
-    [serviceId]
+    [serviceId],
   );
 
   if (!serviceId || !service) {
@@ -241,8 +243,14 @@ export default function ServiceInstructors() {
               </div>
 
               <Button
-                className="w-full mt-6 bg-green-600 text-white hover:bg-green-700"
-                onClick={() => navigate(`/booking/${serviceId}/${inst.id}`)}
+                onClick={() => {
+                  const target = `/booking/${serviceId}/${inst.id}`;
+                  if (!user) {
+                    navigate("/auth", { state: { from: target } });
+                    return;
+                  }
+                  navigate(target);
+                }}
               >
                 Select Instructor
               </Button>
