@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
+import { NavLink, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 
 const Header = () => {
   const [scrolled, setScrolled] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const onScroll = () => {
@@ -21,36 +23,65 @@ const Header = () => {
     >
       <div className="max-w-7xl mx-auto px-8 h-20 flex items-center justify-between">
         {/* Logo */}
-        <div className="flex items-center gap-2 font-bold text-lg">
+        <div
+          onClick={() => navigate("/")}
+          className="flex items-center gap-3 cursor-pointer"
+        >
           <img
             src={scrolled ? "/images/logo-green.svg" : "/images/logo-white.svg"}
             alt="Kultoura Verde"
-            className="h-48 transition-opacity duration-300"
+            className="h-40 w-auto transition-all duration-300"
           />
+          <span
+            className={`font-semibold text-lg transition-colors
+              ${scrolled ? "text-green-700" : "text-white"}
+            `}
+          ></span>
         </div>
 
         {/* Nav */}
         <nav className="hidden md:flex items-center gap-8 text-sm font-medium">
-          {["Home", "Services", "Contact Us"].map((item) => (
-            <a
-              key={item}
-              href="#"
-              className={`transition-colors
-                ${
-                  scrolled
-                    ? "text-gray-700 hover:text-green-600"
-                    : "text-white/90 hover:text-white"
-                }
-              `}
-            >
-              {item}
-            </a>
-          ))}
+          <NavLink
+            to="/"
+            className={({ isActive }) =>
+              `transition-colors ${
+                scrolled
+                  ? "text-gray-700 hover:text-green-600"
+                  : "text-white/90 hover:text-white"
+              } ${isActive ? "font-semibold" : ""}`
+            }
+          >
+            Home
+          </NavLink>
+
+          <NavLink
+            to="/services"
+            className={({ isActive }) =>
+              `transition-colors ${
+                scrolled
+                  ? "text-gray-700 hover:text-green-600"
+                  : "text-white/90 hover:text-white"
+              } ${isActive ? "font-semibold" : ""}`
+            }
+          >
+            Services
+          </NavLink>
+
+          <NavLink
+            to="/contact"
+            className={`transition-colors ${
+              scrolled
+                ? "text-gray-700 hover:text-green-600"
+                : "text-white/90 hover:text-white"
+            }`}
+          >
+            Contact Us
+          </NavLink>
         </nav>
 
         {/* Login */}
         <Button
-          variant={scrolled ? "default" : "secondary"}
+          variant="ghost"
           className={
             scrolled
               ? "bg-green-600 text-white hover:bg-green-700"

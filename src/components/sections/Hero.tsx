@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 
 const services = [
   { label: "Pottery", value: "pottery" },
@@ -8,8 +9,10 @@ const services = [
 ];
 
 const Hero = () => {
+  const navigate = useNavigate();
+
   return (
-    <section className="relative min-h-screen flex items-center">
+    <section className="relative min-h-screen flex items-center text-white">
       {/* Background Image */}
       <img
         src="/images/background.jpg"
@@ -37,6 +40,7 @@ const Hero = () => {
           <Button
             size="lg"
             className="bg-green-600 hover:bg-green-700 text-white"
+            onClick={() => navigate("/services")}
           >
             Browse Services
           </Button>
@@ -45,6 +49,10 @@ const Hero = () => {
             size="lg"
             variant="outline"
             className="border-white text-white hover:bg-white hover:text-black"
+            onClick={() => {
+              const section = document.getElementById("how-it-works");
+              section?.scrollIntoView({ behavior: "smooth" });
+            }}
           >
             How It Works
           </Button>
@@ -53,13 +61,14 @@ const Hero = () => {
         {/* Service Highlights */}
         <div className="mt-12 flex flex-wrap gap-3">
           {services.map((service) => (
-            <a
+            <button
               key={service.value}
-              href={`/services?category=${service.value}`}
-              className="px-4 py-2 rounded-full border border-white/40 text-sm hover:bg-white hover:text-black transition"
+              onClick={() => navigate("/services")}
+              className="px-4 py-2 rounded-full border border-white/40 text-sm
+                hover:bg-white hover:text-black transition"
             >
               {service.label}
-            </a>
+            </button>
           ))}
         </div>
       </div>

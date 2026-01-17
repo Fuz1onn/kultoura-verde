@@ -1,6 +1,7 @@
 import { CalendarCheck, Search, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useFadeInOnScroll } from "@/hooks/useFadeInOnScroll";
+import { useNavigate } from "react-router-dom";
 
 const steps = [
   {
@@ -24,10 +25,11 @@ const steps = [
 ];
 
 const HowItWorks = () => {
+  const navigate = useNavigate();
   const { ref, isVisible } = useFadeInOnScroll();
 
   return (
-    <section className="bg-white text-black py-24">
+    <section className="bg-white text-black py-24" id="how-it-works">
       <div
         ref={ref}
         className={`max-w-6xl mx-auto px-8 transition-all duration-700 ease-out
@@ -69,6 +71,7 @@ const HowItWorks = () => {
         <div className="mt-16 flex justify-center">
           <Button
             size="lg"
+            onClick={() => navigate("/services")}
             className="bg-green-600 hover:bg-green-700 text-white"
           >
             Browse Services

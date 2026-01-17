@@ -1,6 +1,9 @@
 import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 
 const FinalCTA = () => {
+  const navigate = useNavigate();
+
   return (
     <section className="bg-green-600 py-20 text-white">
       <div className="max-w-5xl mx-auto px-8 text-center">
@@ -15,6 +18,7 @@ const FinalCTA = () => {
           <Button
             size="lg"
             className="bg-white text-green-700 hover:bg-gray-100"
+            onClick={() => navigate("/services")}
           >
             Browse Services
           </Button>

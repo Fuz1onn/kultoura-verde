@@ -1,17 +1,17 @@
-import Header from "@/components/layout/Header";
+import { Routes, Route } from "react-router-dom";
+import MainLayout from "@/components/layout/MainLayout";
 import Home from "@/pages/Home";
-import Footer from "./components/layout/Footer";
-import BackToTop from "./components/ui/BackToTop";
+import Services from "@/pages/Services";
+import Booking from "@/pages/Booking";
 
-function App() {
+export default function App() {
   return (
-    <div className="min-h-screen text-white">
-      <Header />
-      <Home />
-      <Footer />
-      <BackToTop />
-    </div>
+    <Routes>
+      <Route element={<MainLayout />}>
+        <Route path="/" element={<Home />} />
+        <Route path="/services" element={<Services />} />
+        <Route path="/booking/:serviceId" element={<Booking />} />
+      </Route>
+    </Routes>
   );
 }
-
-export default App;
