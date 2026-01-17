@@ -1,28 +1,35 @@
 import { useMemo } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import type { Booking } from "@/types/booking";
+import type { Booking, TransportOption } from "@/types/booking";
 import { getBooking } from "@/lib/bookingsStore";
 
 type LocationState = { booking?: Booking };
 
 function formatDate(dateISO: string) {
-  try {
-    const d = new Date(dateISO + "T00:00:00");
-    return d.toLocaleDateString(undefined, {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  } catch {
-    return dateISO;
-  }
+  const d = new Date(dateISO + "T00:00:00");
+  return d.toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
 }
 
-function transportLabel(t: Booking["transport"]) {
+function transportLabel(t?: TransportOption) {
+  if (!t) return "None";
   if (t === "jeepney") return "Jeepney";
   if (t === "tricycle") return "Tricycle";
   return "Van";
+}
+
+function addOnsLabel(addOns?: Booking["addOns"]) {
+  if (!addOns) return null;
+  const items = [
+    addOns.placesToEat ? "Places to Eat" : null,
+    addOns.pasalubongCenter ? "Pasalubong Center" : null,
+  ].filter(Boolean) as string[];
+
+  return items.length ? items.join(", ") : null;
 }
 
 export default function BookingRequested() {
@@ -62,6 +69,8 @@ export default function BookingRequested() {
     );
   }
 
+  const addOns = addOnsLabel(booking.addOns);
+
   return (
     <section className="min-h-screen bg-gray-50 text-gray-900 pt-32 pb-24">
       <div className="mx-auto max-w-4xl px-6 md:px-8">
@@ -76,8 +85,7 @@ export default function BookingRequested() {
                 <span className="font-medium text-gray-900">
                   Pending confirmation
                 </span>
-                . We’ll notify you once the instructor and driver availability
-                is confirmed.
+                . We’ll notify you once availability is confirmed.
               </p>
             </div>
 
@@ -107,17 +115,26 @@ export default function BookingRequested() {
             </div>
 
             <div className="rounded-xl border bg-gray-50 px-4 py-3">
-              <p className="text-xs text-gray-500">Transportation (Included)</p>
+              <p className="text-xs text-gray-500">Transportation</p>
               <p className="font-medium text-gray-900">
                 {transportLabel(booking.transport)}
               </p>
-              <p className="mt-1 text-xs text-gray-500">
-                Driver: To be assigned
-              </p>
+              {booking.transport ? (
+                <p className="mt-1 text-xs text-gray-500">
+                  Driver: To be assigned
+                </p>
+              ) : null}
             </div>
+
+            {addOns ? (
+              <div className="rounded-xl border bg-gray-50 px-4 py-3 md:col-span-2">
+                <p className="text-xs text-gray-500">Tour Add-ons</p>
+                <p className="font-medium text-gray-900">{addOns}</p>
+              </div>
+            ) : null}
           </div>
 
-          {booking.pickupNotes?.trim() ? (
+          {booking.pickupNotes ? (
             <div className="mt-6 rounded-xl border bg-gray-50 px-4 py-3">
               <p className="text-xs text-gray-500">Pickup Notes</p>
               <p className="text-sm text-gray-800">{booking.pickupNotes}</p>

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import type { BookingStatus } from "@/types/booking";
+import type { Booking, BookingStatus, TransportOption } from "@/types/booking";
 import { clearBookings, loadBookings } from "@/lib/bookingsStore";
 
 function statusBadge(status: BookingStatus) {
@@ -26,9 +26,28 @@ function formatDate(dateISO: string) {
   });
 }
 
+function transportLabel(t?: TransportOption) {
+  if (!t) return "None";
+  if (t === "jeepney") return "Jeepney";
+  if (t === "tricycle") return "Tricycle";
+  return "Van";
+}
+
+function addOnsLabel(addOns?: Booking["addOns"]) {
+  if (!addOns) return null;
+  const items = [
+    addOns.placesToEat ? "Places to Eat" : null,
+    addOns.pasalubongCenter ? "Pasalubong Center" : null,
+  ].filter(Boolean) as string[];
+
+  return items.length ? items.join(", ") : null;
+}
+
 export default function Bookings() {
   const navigate = useNavigate();
-  const [bookings, setBookings] = useState(() => loadBookings());
+
+  // ✅ load once (no effect)
+  const [bookings, setBookings] = useState<Booking[]>(() => loadBookings());
 
   return (
     <section className="min-h-screen bg-gray-50 text-gray-900 pt-32 pb-24">
@@ -79,64 +98,84 @@ export default function Bookings() {
           </div>
         ) : (
           <div className="grid gap-4">
-            {bookings.map((b) => (
-              <div key={b.id} className="rounded-2xl bg-white border p-6">
-                <div className="flex justify-between gap-4">
-                  <div>
-                    <div className="flex items-center gap-3">
-                      <h3 className="text-lg font-semibold">{b.serviceName}</h3>
-                      <span
-                        className={`rounded-full px-3 py-1 text-xs font-medium ${statusBadge(
-                          b.status
-                        )}`}
-                      >
-                        {b.status}
-                      </span>
+            {bookings.map((b) => {
+              const addOns = addOnsLabel(b.addOns);
+              return (
+                <div key={b.id} className="rounded-2xl bg-white border p-6">
+                  <div className="flex justify-between gap-4">
+                    <div>
+                      <div className="flex items-center gap-3">
+                        <h3 className="text-lg font-semibold">
+                          {b.serviceName}
+                        </h3>
+                        <span
+                          className={`rounded-full px-3 py-1 text-xs font-medium ${statusBadge(
+                            b.status,
+                          )}`}
+                        >
+                          {b.status}
+                        </span>
+                      </div>
+
+                      <p className="text-sm text-gray-600 mt-1">
+                        Instructor:{" "}
+                        <span className="font-medium text-gray-900">
+                          {b.instructorName}
+                        </span>
+                      </p>
+
+                      <p className="text-sm text-gray-600">
+                        Schedule:{" "}
+                        <span className="font-medium text-gray-900">
+                          {formatDate(b.dateISO)} • {b.timeLabel}
+                        </span>
+                      </p>
+
+                      <p className="text-sm text-gray-600">
+                        Transportation:{" "}
+                        <span className="font-medium text-gray-900">
+                          {transportLabel(b.transport)}
+                        </span>{" "}
+                        {b.transport ? (
+                          <span className="text-gray-500">
+                            (Driver: To be assigned)
+                          </span>
+                        ) : null}
+                      </p>
+
+                      {addOns ? (
+                        <p className="text-sm text-gray-600">
+                          Add-ons:{" "}
+                          <span className="font-medium text-gray-900">
+                            {addOns}
+                          </span>
+                        </p>
+                      ) : null}
                     </div>
 
-                    <p className="text-sm text-gray-600 mt-1">
-                      Instructor:{" "}
-                      <span className="font-medium text-gray-900">
-                        {b.instructorName}
-                      </span>
-                    </p>
-
-                    <p className="text-sm text-gray-600">
-                      Schedule:{" "}
-                      <span className="font-medium text-gray-900">
-                        {formatDate(b.dateISO)} • {b.timeLabel}
-                      </span>
-                    </p>
-
-                    <p className="text-sm text-gray-600">
-                      Transport:{" "}
-                      <span className="font-medium text-gray-900">
-                        {b.transport}
-                      </span>{" "}
-                      <span className="text-gray-500">
-                        (Driver: To be assigned)
-                      </span>
-                    </p>
+                    <div className="flex items-center">
+                      <Button
+                        variant="outline"
+                        onClick={() =>
+                          navigate(`/booking/requested/${b.id}`, {
+                            state: { booking: b },
+                          })
+                        }
+                      >
+                        View
+                      </Button>
+                    </div>
                   </div>
 
-                  <div className="flex items-center">
-                    <Button
-                      variant="outline"
-                      onClick={() => navigate(`/booking/requested/${b.id}`)}
-                    >
-                      View
-                    </Button>
-                  </div>
+                  {b.pickupNotes ? (
+                    <div className="mt-4 rounded-xl bg-gray-50 border px-4 py-3">
+                      <p className="text-xs text-gray-500">Pickup Notes</p>
+                      <p className="text-sm text-gray-800">{b.pickupNotes}</p>
+                    </div>
+                  ) : null}
                 </div>
-
-                {b.pickupNotes && (
-                  <div className="mt-4 rounded-xl bg-gray-50 border px-4 py-3">
-                    <p className="text-xs text-gray-500">Pickup Notes</p>
-                    <p className="text-sm text-gray-800">{b.pickupNotes}</p>
-                  </div>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

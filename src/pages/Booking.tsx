@@ -44,7 +44,7 @@ export default function Booking() {
   const [date, setDate] = useState<Date | undefined>();
   const [time, setTime] = useState<string | null>(null);
 
-  // Transportation (required selection)
+  // Transportation (OPTIONAL)
   const [transport, setTransport] = useState<TransportOption | null>(null);
   const [pickupNotes, setPickupNotes] = useState<string>("");
 
@@ -84,7 +84,8 @@ export default function Booking() {
           ? "Van"
           : "";
 
-  const canSubmit = Boolean(date && time && transport);
+  // ✅ Transportation no longer required
+  const canSubmit = Boolean(date && time);
 
   return (
     <section className="relative min-h-screen bg-gray-50 text-gray-900 pt-32 pb-24">
@@ -105,25 +106,23 @@ export default function Booking() {
           <span className="font-medium text-gray-900">{instructorName}</span>
         </p>
 
-        {/* Placeholder summary line */}
+        {/* Summary line */}
         <div className="mb-8 rounded-xl border bg-white px-4 py-3 text-sm text-gray-700">
           <div className="flex flex-wrap gap-x-6 gap-y-2">
             <span>
               <span className="text-gray-500">Driver:</span>{" "}
-              <span className="font-medium text-gray-900">To be assigned</span>
+              <span className="font-medium text-gray-900">
+                {transport ? "To be assigned" : "Not included"}
+              </span>
             </span>
             <span>
               <span className="text-gray-500">Vehicle:</span>{" "}
               <span className="font-medium text-gray-900">
-                {transportLabel || "Select below"}
+                {transportLabel || "Not selected"}
               </span>
             </span>
           </div>
         </div>
-
-        <p className="text-sm text-gray-500 mb-8">
-          Step 1 of 2 — Choose your preferred date, time, and transportation.
-        </p>
 
         <div className="rounded-2xl bg-white border p-6 md:p-8">
           {/* Date */}
@@ -133,7 +132,7 @@ export default function Booking() {
               mode="single"
               selected={date}
               onSelect={(d) => {
-                if (d) setDate(d); // prevents clearing selection
+                if (d) setDate(d);
               }}
               disabled={(d) => {
                 const today = new Date();
@@ -169,20 +168,36 @@ export default function Booking() {
             </div>
           </div>
 
-          {/* Transportation (Included + required) */}
+          {/* Transportation (Optional) */}
           <div className="mb-10">
-            <h2 className="text-lg font-medium mb-2">
-              Transportation (Included)
-            </h2>
-            <p className="text-sm text-gray-600 mb-4">
-              Transportation is included in your package. Please choose your
-              preferred vehicle type.{" "}
-              <span className="font-medium text-gray-900">
-                Driver will be assigned after confirmation.
-              </span>
-            </p>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-medium mb-1">
+                  Transportation (Optional)
+                </h2>
+                <p className="text-sm text-gray-600">
+                  Select a vehicle if you want transportation included.{" "}
+                  <span className="font-medium text-gray-900">
+                    Driver will be assigned after confirmation.
+                  </span>
+                </p>
+              </div>
 
-            <div className="grid gap-3 sm:grid-cols-3">
+              {transport ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTransport(null);
+                    setPickupNotes("");
+                  }}
+                  className="text-sm font-medium text-gray-600 hover:text-green-700 transition"
+                >
+                  Clear
+                </button>
+              ) : null}
+            </div>
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
               {[
                 { id: "jeepney", label: "Jeepney" },
                 { id: "tricycle", label: "Tricycle" },
@@ -192,6 +207,7 @@ export default function Booking() {
                 return (
                   <button
                     key={opt.id}
+                    type="button"
                     onClick={() => setTransport(opt.id as TransportOption)}
                     className={`rounded-xl border px-4 py-3 text-sm transition text-left
                       ${
@@ -202,35 +218,31 @@ export default function Booking() {
                   >
                     <div className="font-medium text-gray-900">{opt.label}</div>
                     <div className="text-xs text-gray-600 mt-1">
-                      {isSelected ? "Selected" : "Choose this option"}
+                      {isSelected ? "Selected" : "Optional"}
                     </div>
                   </button>
                 );
               })}
             </div>
 
-            {!transport && (
-              <p className="mt-3 text-xs text-red-600">
-                Please select a transportation type to continue.
-              </p>
-            )}
-
-            {/* Optional pickup notes */}
-            <div className="mt-6">
-              <label className="block text-sm font-medium text-gray-900 mb-2">
-                Pickup Notes (Optional)
-              </label>
-              <textarea
-                value={pickupNotes}
-                onChange={(e) => setPickupNotes(e.target.value)}
-                placeholder="e.g., Landmark, gate number, pickup area instructions..."
-                rows={3}
-                className="w-full rounded-xl border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-green-600/30"
-              />
-              <p className="mt-2 text-xs text-gray-500">
-                This helps your assigned driver find you faster.
-              </p>
-            </div>
+            {/* Pickup notes only when transport is selected */}
+            {transport ? (
+              <div className="mt-6">
+                <label className="block text-sm font-medium text-gray-900 mb-2">
+                  Pickup Notes (Optional)
+                </label>
+                <textarea
+                  value={pickupNotes}
+                  onChange={(e) => setPickupNotes(e.target.value)}
+                  placeholder="e.g., Landmark, gate number, pickup area instructions..."
+                  rows={3}
+                  className="w-full rounded-xl border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-green-600/30"
+                />
+                <p className="mt-2 text-xs text-gray-500">
+                  This helps your assigned driver find you faster.
+                </p>
+              </div>
+            ) : null}
           </div>
 
           {/* Optional Tour Add-ons */}
@@ -262,8 +274,7 @@ export default function Booking() {
                       Places to Eat
                     </div>
                     <div className="mt-1 text-xs text-gray-600">
-                      Get recommendations and optional stops for local food
-                      spots.
+                      Recommendations and optional food stops.
                     </div>
                   </div>
                   <span
@@ -299,7 +310,7 @@ export default function Booking() {
                       Pasalubong Center
                     </div>
                     <div className="mt-1 text-xs text-gray-600">
-                      Optional stop for souvenirs and local delicacies.
+                      Optional stop for souvenirs and delicacies.
                     </div>
                   </div>
                   <span
@@ -314,20 +325,6 @@ export default function Booking() {
                 </div>
               </button>
             </div>
-
-            {(addOns.placesToEat || addOns.pasalubongCenter) && (
-              <p className="mt-3 text-xs text-gray-500">
-                Selected add-ons:{" "}
-                <span className="text-gray-800 font-medium">
-                  {[
-                    addOns.placesToEat ? "Places to Eat" : null,
-                    addOns.pasalubongCenter ? "Pasalubong Center" : null,
-                  ]
-                    .filter(Boolean)
-                    .join(", ")}
-                </span>
-              </p>
-            )}
           </div>
 
           {/* CTA */}
@@ -351,9 +348,11 @@ export default function Booking() {
                 instructorName,
                 dateISO,
                 timeLabel: time!,
-                transport: transport!,
-                pickupNotes: pickupNotes.trim() || undefined,
-                driver: "to_be_assigned",
+                transport: transport ?? undefined,
+                pickupNotes: transport
+                  ? pickupNotes.trim() || undefined
+                  : undefined,
+                driver: transport ? "to_be_assigned" : "not_included",
                 addOns: {
                   placesToEat: addOns.placesToEat,
                   pasalubongCenter: addOns.pasalubongCenter,
