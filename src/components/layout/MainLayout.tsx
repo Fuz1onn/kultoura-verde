@@ -6,12 +6,14 @@ import BackToTop from "../ui/BackToTop";
 export default function MainLayout() {
   return (
     <div className="min-h-screen flex flex-col">
-      <Header />
-      <main className="flex-1">
-        <Outlet />
-      </main>
-      <Footer />
-      <BackToTop />
+      <div className="[--header-h:80px]">
+        <Header />
+        <main className="flex-1">
+          <Outlet />
+        </main>
+        <Footer />
+        <BackToTop />
+      </div>
     </div>
   );
 }
