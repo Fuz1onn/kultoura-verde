@@ -44,7 +44,8 @@ export default function Auth() {
           email: email.trim(),
           password,
           options: {
-            data: { full_name: name.trim() }, // stored in user_metadata
+            data: { full_name: name.trim() },
+            emailRedirectTo: `${window.location.origin}/auth/callback`,
           },
         });
         if (error) throw error;

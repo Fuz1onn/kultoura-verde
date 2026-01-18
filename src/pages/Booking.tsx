@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useMemo, useState } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
-import { addBooking } from "@/lib/bookingsStore";
+import { createBooking } from "@/lib/bookings";
 import type {
   Booking as BookingType,
   TransportOption,
@@ -54,6 +54,9 @@ export default function Booking() {
     pasalubongCenter: false,
   });
 
+  const [submitting, setSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+
   const isValid = useMemo(
     () => Boolean(serviceName && instructorName),
     [serviceName, instructorName],
@@ -85,7 +88,7 @@ export default function Booking() {
           : "";
 
   // ✅ Transportation no longer required
-  const canSubmit = Boolean(date && time);
+  const canSubmit = Boolean(date && time) && !submitting;
 
   return (
     <section className="relative min-h-screen bg-gray-50 text-gray-900 pt-32 pb-24">
@@ -125,6 +128,12 @@ export default function Booking() {
         </div>
 
         <div className="rounded-2xl bg-white border p-6 md:p-8">
+          {errorMsg ? (
+            <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {errorMsg}
+            </div>
+          ) : null}
+
           {/* Date */}
           <div className="mb-10">
             <h2 className="text-lg font-medium mb-4">1. Select a Date</h2>
@@ -247,9 +256,11 @@ export default function Booking() {
 
           {/* Optional Tour Add-ons */}
           <div className="mb-10">
-            <h2 className="text-lg font-medium mb-2">Optional Tour Add-ons</h2>
+            <h2 className="text-lg font-medium mb-2">
+              Tour Add-ons (Optional)
+            </h2>
             <p className="text-sm text-gray-600 mb-4">
-              Add quick stops to enhance your experience (optional).
+              Add quick stops to enhance your experience.
             </p>
 
             <div className="grid gap-3 sm:grid-cols-2">
@@ -332,40 +343,50 @@ export default function Booking() {
             size="lg"
             disabled={!canSubmit}
             className="w-full md:w-auto bg-green-600 text-white hover:bg-green-700"
-            onClick={() => {
-              const dateISO = date!.toISOString().slice(0, 10);
+            onClick={async () => {
+              if (!date || !time || !serviceId || !instructorId) return;
 
-              const booking: BookingType = {
-                id:
-                  typeof crypto !== "undefined" && "randomUUID" in crypto
-                    ? crypto.randomUUID()
-                    : `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-                createdAt: new Date().toISOString(),
-                status: "pending",
-                serviceId: serviceId!,
-                serviceName,
-                instructorId: instructorId!,
-                instructorName,
-                dateISO,
-                timeLabel: time!,
-                transport: transport ?? undefined,
-                pickupNotes: transport
-                  ? pickupNotes.trim() || undefined
-                  : undefined,
-                driver: transport ? "to_be_assigned" : "not_included",
-                addOns: {
-                  placesToEat: addOns.placesToEat,
-                  pasalubongCenter: addOns.pasalubongCenter,
-                },
-              };
+              try {
+                setErrorMsg("");
+                setSubmitting(true);
 
-              addBooking(booking);
-              navigate(`/booking/requested/${booking.id}`, {
-                state: { booking },
-              });
+                const dateISO = date.toISOString().slice(0, 10);
+
+                const saved = await createBooking({
+                  serviceId,
+                  serviceName,
+                  instructorId,
+                  instructorName,
+                  dateISO,
+                  timeLabel: time,
+                  transport: transport ?? undefined,
+                  pickupNotes: transport
+                    ? pickupNotes.trim() || undefined
+                    : undefined,
+                  addOns: {
+                    placesToEat: addOns.placesToEat,
+                    pasalubongCenter: addOns.pasalubongCenter,
+                  },
+                });
+
+                // Keep your old "state" behavior (optional)
+                const bookingForState: BookingType = saved;
+
+                navigate(`/booking/requested/${saved.id}`, {
+                  state: { booking: bookingForState },
+                });
+              } catch (err: unknown) {
+                setErrorMsg(
+                  err instanceof Error
+                    ? err.message
+                    : "Failed to create booking.",
+                );
+              } finally {
+                setSubmitting(false);
+              }
             }}
           >
-            Request Booking
+            {submitting ? "Requesting..." : "Request Booking"}
           </Button>
 
           <p className="mt-4 text-xs text-gray-500">

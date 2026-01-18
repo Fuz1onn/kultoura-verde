@@ -23,6 +23,7 @@ const Header = () => {
 
   const loginWithReturn = () => {
     const from = location.pathname + location.search;
+    localStorage.setItem("kv_post_auth_redirect", from);
     navigate("/auth", { state: { from } });
   };
 
@@ -34,9 +35,16 @@ const Header = () => {
     >
       <div className="mx-auto max-w-6xl px-6 md:px-8 h-20 flex items-center justify-between">
         {/* Logo */}
-        <div onClick={() => navigate("/")} className="flex items-center gap-3 cursor-pointer">
+        <div
+          onClick={() => navigate("/")}
+          className="flex items-center gap-3 cursor-pointer"
+        >
           <img
-            src={shouldBeSolid ? "/images/logo-green.svg" : "/images/logo-white.svg"}
+            src={
+              shouldBeSolid
+                ? "/images/logo-green.svg"
+                : "/images/logo-white.svg"
+            }
             alt="Kultoura Verde"
             className="h-40 w-auto transition-all duration-300"
           />

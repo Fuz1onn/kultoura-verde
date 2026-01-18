@@ -1,8 +1,9 @@
-import { useMemo } from "react";
+// src/pages/BookingRequested.tsx
+import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import type { Booking, TransportOption } from "@/types/booking";
-import { getBooking } from "@/lib/bookingsStore";
+import type { Booking, BookingStatus, TransportOption } from "@/types/booking";
+import { getBookingById } from "@/lib/bookings";
 
 type LocationState = { booking?: Booking };
 
@@ -32,6 +33,72 @@ function addOnsLabel(addOns?: Booking["addOns"]) {
   return items.length ? items.join(", ") : null;
 }
 
+function statusPill(status: BookingStatus) {
+  switch (status) {
+    case "pending":
+      return {
+        label: "Pending",
+        cls: "bg-yellow-100 text-yellow-800",
+        message: (
+          <>
+            Your booking is{" "}
+            <span className="font-medium text-gray-900">
+              Pending confirmation
+            </span>
+            . We’ll notify you once availability is confirmed.
+          </>
+        ),
+      };
+    case "confirmed":
+      return {
+        label: "Confirmed",
+        cls: "bg-green-100 text-green-800",
+        message: (
+          <>
+            Your booking is{" "}
+            <span className="font-medium text-gray-900">Confirmed</span>. See
+            details below.
+          </>
+        ),
+      };
+    case "rejected":
+      return {
+        label: "Rejected",
+        cls: "bg-red-100 text-red-800",
+        message: (
+          <>
+            Your booking was{" "}
+            <span className="font-medium text-gray-900">Rejected</span>. You can
+            book another service anytime.
+          </>
+        ),
+      };
+    case "cancelled":
+      return {
+        label: "Cancelled",
+        cls: "bg-gray-100 text-gray-800",
+        message: (
+          <>
+            This booking was{" "}
+            <span className="font-medium text-gray-900">Cancelled</span>.
+          </>
+        ),
+      };
+    case "completed":
+      return {
+        label: "Completed",
+        cls: "bg-blue-100 text-blue-800",
+        message: (
+          <>
+            This booking is{" "}
+            <span className="font-medium text-gray-900">Completed</span>. Thanks
+            for visiting!
+          </>
+        ),
+      };
+  }
+}
+
 export default function BookingRequested() {
   const navigate = useNavigate();
   const { bookingId } = useParams();
@@ -39,13 +106,47 @@ export default function BookingRequested() {
 
   const bookingFromState = (location.state as LocationState | null)?.booking;
 
-  const booking = useMemo(() => {
-    if (!bookingId) return null;
-    if (bookingFromState?.id === bookingId) return bookingFromState;
-    return getBooking(bookingId);
+  const [booking, setBooking] = useState<Booking | null>(() => {
+    if (bookingFromState && bookingId && bookingFromState.id === bookingId) {
+      return bookingFromState;
+    }
+    return null;
+  });
+
+  const [loading, setLoading] = useState<boolean>(() => !booking);
+  const [errorMsg, setErrorMsg] = useState<string>("");
+
+  useEffect(() => {
+    const run = async () => {
+      if (!bookingId) return;
+
+      if (bookingFromState?.id === bookingId) {
+        setBooking(bookingFromState);
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setErrorMsg("");
+        setLoading(true);
+        const b = await getBookingById(bookingId);
+        setBooking(b);
+      } catch (err: unknown) {
+        setErrorMsg(
+          err instanceof Error ? err.message : "Failed to load booking.",
+        );
+        setBooking(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    run();
   }, [bookingId, bookingFromState]);
 
-  if (!bookingId || !booking) {
+  const addOns = useMemo(() => addOnsLabel(booking?.addOns), [booking]);
+
+  if (!bookingId) {
     return (
       <section className="min-h-screen bg-gray-50 text-gray-900 pt-32 pb-24">
         <div className="mx-auto max-w-4xl px-6 md:px-8">
@@ -69,7 +170,51 @@ export default function BookingRequested() {
     );
   }
 
-  const addOns = addOnsLabel(booking.addOns);
+  if (loading) {
+    return (
+      <section className="min-h-screen bg-gray-50 text-gray-900 pt-32 pb-24">
+        <div className="mx-auto max-w-4xl px-6 md:px-8">
+          <div className="rounded-2xl bg-white border p-6 md:p-10">
+            <div className="h-7 w-44 rounded bg-gray-200 animate-pulse" />
+            <div className="mt-3 h-4 w-96 rounded bg-gray-200 animate-pulse" />
+            <div className="mt-8 grid gap-4 md:grid-cols-2">
+              <div className="h-16 rounded-xl bg-gray-200 animate-pulse" />
+              <div className="h-16 rounded-xl bg-gray-200 animate-pulse" />
+              <div className="h-16 rounded-xl bg-gray-200 animate-pulse" />
+              <div className="h-16 rounded-xl bg-gray-200 animate-pulse" />
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (!booking) {
+    return (
+      <section className="min-h-screen bg-gray-50 text-gray-900 pt-32 pb-24">
+        <div className="mx-auto max-w-4xl px-6 md:px-8">
+          <h1 className="text-2xl font-semibold">Booking request not found</h1>
+          <p className="mt-2 text-gray-600">
+            {errorMsg ||
+              "Please return to Services and submit a booking request again."}
+          </p>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Button
+              onClick={() => navigate("/services")}
+              className="bg-green-600 text-white hover:bg-green-700"
+            >
+              Back to Services
+            </Button>
+            <Button variant="outline" onClick={() => navigate("/bookings")}>
+              View My Bookings
+            </Button>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  const pill = statusPill(booking.status);
 
   return (
     <section className="min-h-screen bg-gray-50 text-gray-900 pt-32 pb-24">
@@ -78,19 +223,23 @@ export default function BookingRequested() {
           <div className="flex items-start justify-between gap-6">
             <div>
               <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">
-                Request sent ✅
+                {booking.status === "pending"
+                  ? "Request sent ✅"
+                  : booking.status === "confirmed"
+                    ? "Booking confirmed ✅"
+                    : booking.status === "rejected"
+                      ? "Booking update"
+                      : booking.status === "completed"
+                        ? "Booking completed ✅"
+                        : "Booking update"}
               </h1>
-              <p className="mt-2 text-gray-600">
-                Your booking is{" "}
-                <span className="font-medium text-gray-900">
-                  Pending confirmation
-                </span>
-                . We’ll notify you once availability is confirmed.
-              </p>
+              <p className="mt-2 text-gray-600">{pill.message}</p>
             </div>
 
-            <span className="shrink-0 rounded-full bg-yellow-100 text-yellow-800 px-3 py-1 text-xs font-medium">
-              Pending
+            <span
+              className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium ${pill.cls}`}
+            >
+              {pill.label}
             </span>
           </div>
 
@@ -119,9 +268,15 @@ export default function BookingRequested() {
               <p className="font-medium text-gray-900">
                 {transportLabel(booking.transport)}
               </p>
+
               {booking.transport ? (
                 <p className="mt-1 text-xs text-gray-500">
-                  Driver: To be assigned
+                  Driver:{" "}
+                  <span className="font-medium text-gray-700">
+                    {booking.driver && booking.driver !== "to_be_assigned"
+                      ? booking.driver
+                      : "To be assigned"}
+                  </span>
                 </p>
               ) : null}
             </div>

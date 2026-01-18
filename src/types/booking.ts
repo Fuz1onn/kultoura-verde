@@ -1,5 +1,10 @@
 // src/types/booking.ts
-export type BookingStatus = "pending" | "confirmed" | "cancelled" | "completed";
+export type BookingStatus =
+  | "pending"
+  | "confirmed"
+  | "rejected"
+  | "cancelled"
+  | "completed";
 
 export type TransportOption = "jeepney" | "tricycle" | "van";
 

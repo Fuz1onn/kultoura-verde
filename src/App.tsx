@@ -1,6 +1,5 @@
 // src/App.tsx
 import { Routes, Route, Navigate } from "react-router-dom";
-
 import MainLayout from "@/components/layout/MainLayout";
 
 import Home from "@/pages/Home";
@@ -10,8 +9,11 @@ import Booking from "@/pages/Booking";
 import BookingRequested from "@/pages/BookingRequested";
 import Bookings from "@/pages/Bookings";
 import Auth from "@/pages/Auth";
+import AuthCallback from "@/pages/AuthCallback";
 
 import RequireAuth from "@/routes/RequireAuth";
+import AdminBookings from "@/pages/admin/AdminBookings";
+import RequireAdmin from "@/routes/RequireAdmin";
 
 export default function App() {
   return (
@@ -25,6 +27,7 @@ export default function App() {
           element={<ServiceInstructors />}
         />
         <Route path="/auth" element={<Auth />} />
+        <Route path="/auth/callback" element={<AuthCallback />} />
 
         {/* Protected */}
         <Route element={<RequireAuth />}>
@@ -37,6 +40,9 @@ export default function App() {
             element={<BookingRequested />}
           />
           <Route path="/bookings" element={<Bookings />} />
+          <Route element={<RequireAdmin />}>
+            <Route path="/admin/bookings" element={<AdminBookings />} />
+          </Route>
         </Route>
 
         {/* Fallback */}

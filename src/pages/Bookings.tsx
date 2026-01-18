@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import type { Booking, BookingStatus, TransportOption } from "@/types/booking";
-import { clearBookings, loadBookings } from "@/lib/bookingsStore";
+import { listMyBookings } from "@/lib/bookings";
 
 function statusBadge(status: BookingStatus) {
   switch (status) {
@@ -46,8 +46,26 @@ function addOnsLabel(addOns?: Booking["addOns"]) {
 export default function Bookings() {
   const navigate = useNavigate();
 
-  // ✅ load once (no effect)
-  const [bookings, setBookings] = useState<Booking[]>(() => loadBookings());
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState("");
+
+  useEffect(() => {
+    const run = async () => {
+      try {
+        setErrorMsg("");
+        setLoading(true);
+        const data = await listMyBookings();
+        setBookings(data);
+      } catch (err: unknown) {
+        setErrorMsg(err instanceof Error ? err.message : "Failed...");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    run();
+  }, []);
 
   return (
     <section className="min-h-screen bg-gray-50 text-gray-900 pt-32 pb-24">
@@ -73,17 +91,25 @@ export default function Bookings() {
             </Button>
             <Button
               variant="outline"
-              onClick={() => {
-                clearBookings();
-                setBookings([]);
-              }}
+              onClick={() => window.location.reload()}
+              title="Reload bookings"
             >
-              Clear (Dev)
+              Refresh
             </Button>
           </div>
         </div>
 
-        {bookings.length === 0 ? (
+        {loading ? (
+          <div className="rounded-2xl border bg-white p-10 text-center">
+            <h2 className="text-xl font-semibold">Loading bookings…</h2>
+            <p className="mt-2 text-gray-600">Please wait.</p>
+          </div>
+        ) : errorMsg ? (
+          <div className="rounded-2xl border border-red-200 bg-red-50 p-6">
+            <h2 className="text-lg font-semibold text-red-800">Error</h2>
+            <p className="mt-2 text-sm text-red-700">{errorMsg}</p>
+          </div>
+        ) : bookings.length === 0 ? (
           <div className="rounded-2xl border bg-white p-10 text-center">
             <h2 className="text-xl font-semibold">No bookings yet</h2>
             <p className="mt-2 text-gray-600">
@@ -156,11 +182,7 @@ export default function Bookings() {
                     <div className="flex items-center">
                       <Button
                         variant="outline"
-                        onClick={() =>
-                          navigate(`/booking/requested/${b.id}`, {
-                            state: { booking: b },
-                          })
-                        }
+                        onClick={() => navigate(`/booking/requested/${b.id}`)}
                       >
                         View
                       </Button>
