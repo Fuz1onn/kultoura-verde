@@ -1,4 +1,3 @@
-// src/pages/AuthCallback.tsx
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabaseClient";
@@ -8,12 +7,34 @@ export default function AuthCallback() {
 
   useEffect(() => {
     const run = async () => {
-      // Supabase will detect session from URL (hash or code) and persist it.
-      await supabase.auth.getSession();
+      // If Supabase redirects with ?code=... (PKCE)
+      const hasCode = new URL(window.location.href).searchParams.get("code");
 
-      const to = localStorage.getItem("kv_post_auth_redirect") || "/services";
+      if (hasCode) {
+        const { error } = await supabase.auth.exchangeCodeForSession(
+          window.location.href,
+        );
+        if (error) {
+          navigate("/auth?error=verification", { replace: true });
+          return;
+        }
+      } else {
+        // If Supabase redirects with #access_token=... (hash)
+        // This will parse the URL and store the session automatically if possible
+        // @ts-expect-error - method exists in supabase-js v2, TS types may vary by version
+        const { error } = await supabase.auth.getSessionFromUrl({
+          storeSession: true,
+        });
+
+        if (error) {
+          navigate("/auth?error=verification", { replace: true });
+          return;
+        }
+      }
+
+      const redirect = localStorage.getItem("kv_post_auth_redirect") || "/";
       localStorage.removeItem("kv_post_auth_redirect");
-      navigate(to, { replace: true });
+      navigate(redirect, { replace: true });
     };
 
     run();
@@ -21,15 +42,9 @@ export default function AuthCallback() {
 
   return (
     <section className="min-h-screen bg-gray-50 text-gray-900 pt-32 pb-24">
-      <div className="mx-auto max-w-6xl px-6 md:px-8">
-        <div className="rounded-2xl bg-white border p-8">
-          <div className="h-6 w-48 rounded bg-gray-200 animate-pulse" />
-          <div className="mt-4 h-4 w-80 rounded bg-gray-200 animate-pulse" />
-          <div className="mt-8 h-40 w-full rounded-2xl bg-gray-200 animate-pulse" />
-          <p className="mt-6 text-sm text-gray-600">
-            Finishing sign-in…
-          </p>
-        </div>
+      <div className="mx-auto max-w-2xl px-6 md:px-8 text-center">
+        <h1 className="text-2xl font-semibold">Verifying your email…</h1>
+        <p className="mt-2 text-gray-600">You’ll be redirected shortly.</p>
       </div>
     </section>
   );
