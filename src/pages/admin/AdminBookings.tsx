@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import type { BookingStatus, TransportOption } from "@/types/booking";
+import { toast } from "sonner";
 import {
   adminListBookings,
   adminConfirmBooking,
@@ -58,9 +59,10 @@ export default function AdminBookings() {
       const data = await adminListBookings();
       setItems(data);
     } catch (err: unknown) {
-      setErrorMsg(
-        err instanceof Error ? err.message : "Failed to load admin bookings.",
-      );
+      const msg =
+        err instanceof Error ? err.message : "Failed to load admin bookings.";
+      setErrorMsg(msg);
+      toast.error("Failed to load bookings", { description: msg });
     } finally {
       setLoading(false);
     }
@@ -73,16 +75,22 @@ export default function AdminBookings() {
   const confirm = async (id: string) => {
     try {
       setBusyId(id);
-      await adminConfirmBooking({
-        id,
-        driverName: driverDraft[id],
-        adminNotes: notesDraft[id],
+
+      const driverName = (driverDraft[id] ?? "").trim() || undefined;
+      const adminNotes = (notesDraft[id] ?? "").trim() || undefined;
+
+      await adminConfirmBooking({ id, driverName, adminNotes });
+
+      toast.success("Booking confirmed", {
+        description: "User has been notified by email.",
       });
+
       await load();
     } catch (err: unknown) {
-      setErrorMsg(
-        err instanceof Error ? err.message : "Failed to confirm booking.",
-      );
+      const msg =
+        err instanceof Error ? err.message : "Failed to confirm booking.";
+      setErrorMsg(msg);
+      toast.error("Confirm failed", { description: msg });
     } finally {
       setBusyId("");
     }
@@ -91,15 +99,21 @@ export default function AdminBookings() {
   const reject = async (id: string) => {
     try {
       setBusyId(id);
-      await adminRejectBooking({
-        id,
-        adminNotes: notesDraft[id],
+
+      const adminNotes = (notesDraft[id] ?? "").trim() || undefined;
+
+      await adminRejectBooking({ id, adminNotes });
+
+      toast.warning("Booking rejected", {
+        description: "User has been notified by email.",
       });
+
       await load();
     } catch (err: unknown) {
-      setErrorMsg(
-        err instanceof Error ? err.message : "Failed to reject booking.",
-      );
+      const msg =
+        err instanceof Error ? err.message : "Failed to reject booking.";
+      setErrorMsg(msg);
+      toast.error("Reject failed", { description: msg });
     } finally {
       setBusyId("");
     }
@@ -108,12 +122,19 @@ export default function AdminBookings() {
   const complete = async (id: string) => {
     try {
       setBusyId(id);
+
       await adminCompleteBooking({ id });
+
+      toast.success("Marked as completed", {
+        description: "Booking status updated.",
+      });
+
       await load();
     } catch (err: unknown) {
-      setErrorMsg(
-        err instanceof Error ? err.message : "Failed to complete booking.",
-      );
+      const msg =
+        err instanceof Error ? err.message : "Failed to complete booking.";
+      setErrorMsg(msg);
+      toast.error("Complete failed", { description: msg });
     } finally {
       setBusyId("");
     }
@@ -163,7 +184,9 @@ export default function AdminBookings() {
                           {b.serviceName}
                         </h3>
                         <span
-                          className={`rounded-full px-3 py-1 text-xs font-medium ${statusPill(b.status)}`}
+                          className={`rounded-full px-3 py-1 text-xs font-medium ${statusPill(
+                            b.status,
+                          )}`}
                         >
                           {b.status}
                         </span>

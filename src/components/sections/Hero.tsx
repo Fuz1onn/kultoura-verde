@@ -15,7 +15,7 @@ const Hero = () => {
     <section className="relative min-h-screen flex items-center text-white">
       {/* Background Image */}
       <img
-        src="/images/background.jpg"
+        src="/images/background4.JPG"
         alt="Cultural craftsmanship"
         className="absolute inset-0 w-full h-full object-cover object-[50%_20%]"
       />

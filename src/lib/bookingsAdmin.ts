@@ -54,6 +54,11 @@ export async function adminConfirmBooking(params: {
     .eq("id", params.id);
 
   if (error) throw error;
+
+  // Fire-and-forget: email user
+  supabase.functions
+    .invoke("booking-status-changed", { body: { bookingId: params.id } })
+    .catch(() => {});
 }
 
 export async function adminRejectBooking(params: {
@@ -71,6 +76,10 @@ export async function adminRejectBooking(params: {
     .eq("id", params.id);
 
   if (error) throw error;
+
+  supabase.functions
+    .invoke("booking-status-changed", { body: { bookingId: params.id } })
+    .catch(() => {});
 }
 
 export async function adminCompleteBooking(params: {

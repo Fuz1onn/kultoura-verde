@@ -62,7 +62,15 @@ export async function createBooking(input: CreateBookingInput): Promise<Booking>
     .single();
 
   if (error) throw error;
-  return rowToBooking(data as BookingRow);
+
+  const booking = rowToBooking(data as BookingRow);
+
+  // Fire-and-forget: admin email (don’t block booking UX if email fails)
+  supabase.functions
+    .invoke("booking-created", { body: { bookingId: booking.id } })
+    .catch(() => {});
+
+  return booking;
 }
 
 export async function getBookingById(id: string): Promise<Booking> {
@@ -77,13 +85,36 @@ export async function getBookingById(id: string): Promise<Booking> {
 }
 
 export async function listMyBookings(): Promise<Booking[]> {
+  const { data: authData, error: authErr } = await supabase.auth.getUser();
+  if (authErr) throw authErr;
+  if (!authData.user) throw new Error("Not authenticated.");
+
   const { data, error } = await supabase
     .from("bookings")
     .select("*")
+    .eq("user_id", authData.user.id)
     .order("created_at", { ascending: false });
 
   if (error) throw error;
+
   return (data ?? []).map((r) => rowToBooking(r as BookingRow));
+}
+
+export async function cancelMyBooking(bookingId: string): Promise<void> {
+  const { data: authData, error: authErr } = await supabase.auth.getUser();
+  if (authErr) throw authErr;
+  if (!authData.user) throw new Error("Not authenticated.");
+
+  const { error } = await supabase
+    .from("bookings")
+    .update({
+      status: "cancelled",
+      cancelled_at: new Date().toISOString(),
+    })
+    .eq("id", bookingId)
+    .eq("user_id", authData.user.id);
+
+  if (error) throw error;
 }
 
 // Optional helper if you want readable errors in UI
