@@ -10,9 +10,10 @@ import BookingRequested from "@/pages/BookingRequested";
 import Bookings from "@/pages/Bookings";
 import Auth from "@/pages/Auth";
 import AuthCallback from "@/pages/AuthCallback";
+import AdminBookings from "@/pages/admin/AdminBookings";
+import InstructorProfile from "@/pages/InstructorProfile";
 
 import RequireAuth from "@/routes/RequireAuth";
-import AdminBookings from "@/pages/admin/AdminBookings";
 import RequireAdmin from "@/routes/RequireAdmin";
 
 export default function App() {
@@ -25,6 +26,10 @@ export default function App() {
         <Route
           path="/services/:serviceId/instructors"
           element={<ServiceInstructors />}
+        />
+        <Route
+          path="/instructors/:instructorId"
+          element={<InstructorProfile />}
         />
         <Route path="/auth" element={<Auth />} />
         <Route path="/auth/callback" element={<AuthCallback />} />

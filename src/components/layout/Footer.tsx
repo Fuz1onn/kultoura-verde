@@ -16,7 +16,6 @@ const Footer = () => {
           <h4 className="text-white font-medium">Explore</h4>
           <ul className="mt-4 space-y-2 text-sm">
             <li>Services</li>
-            <li>Contact Us</li>
           </ul>
         </div>
 

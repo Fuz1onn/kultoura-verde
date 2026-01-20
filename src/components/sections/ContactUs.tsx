@@ -5,7 +5,7 @@ const ContactUs = () => {
   const { ref, isVisible } = useFadeInOnScroll();
 
   return (
-    <section className="bg-gray-50 py-24">
+    <section className="bg-white py-24">
       <div
         ref={ref}
         className={`max-w-4xl mx-auto px-8 transition-all duration-700

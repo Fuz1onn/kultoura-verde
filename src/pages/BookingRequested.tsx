@@ -117,31 +117,77 @@ export default function BookingRequested() {
   const [errorMsg, setErrorMsg] = useState<string>("");
 
   useEffect(() => {
-    const run = async () => {
+    let alive = true;
+    let intervalId: number | null = null;
+
+    const fetchBooking = async () => {
       if (!bookingId) return;
 
-      if (bookingFromState?.id === bookingId) {
+      // If navigation state already has the booking, use it once immediately
+      if (bookingFromState?.id === bookingId && !booking) {
         setBooking(bookingFromState);
         setLoading(false);
-        return;
       }
 
       try {
         setErrorMsg("");
         setLoading(true);
         const b = await getBookingById(bookingId);
-        setBooking(b);
+
+        if (!alive) return;
+
+        setBooking((prev) => {
+          // avoid useless re-renders if nothing changed
+          if (!prev) return b;
+          if (
+            prev.status === b.status &&
+            prev.driver === b.driver &&
+            prev.adminNotes === b.adminNotes
+          ) {
+            return prev;
+          }
+          return b;
+        });
       } catch (err: unknown) {
+        if (!alive) return;
         setErrorMsg(
           err instanceof Error ? err.message : "Failed to load booking.",
         );
         setBooking(null);
       } finally {
-        setLoading(false);
+        if (alive) setLoading(false);
       }
     };
 
-    run();
+    const startPollingIfNeeded = (b: Booking | null) => {
+      // Poll only when it matters
+      const shouldPoll = b?.status === "pending" || b?.status === "confirmed";
+
+      if (!shouldPoll) {
+        if (intervalId) window.clearInterval(intervalId);
+        intervalId = null;
+        return;
+      }
+
+      if (!intervalId) {
+        intervalId = window.setInterval(() => {
+          fetchBooking();
+        }, 6000); // every 6s (safe + light)
+      }
+    };
+
+    // initial fetch
+    fetchBooking().then(() => startPollingIfNeeded(booking));
+
+    // whenever booking changes, decide polling state
+    // (this is okay because state updates trigger effect cleanup/re-run)
+    // but to keep minimal, we’ll just watch booking.status via a second effect below.
+
+    return () => {
+      alive = false;
+      if (intervalId) window.clearInterval(intervalId);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookingId, bookingFromState]);
 
   const addOns = useMemo(() => addOnsLabel(booking?.addOns), [booking]);
@@ -293,6 +339,13 @@ export default function BookingRequested() {
             <div className="mt-6 rounded-xl border bg-gray-50 px-4 py-3">
               <p className="text-xs text-gray-500">Pickup Notes</p>
               <p className="text-sm text-gray-800">{booking.pickupNotes}</p>
+            </div>
+          ) : null}
+
+          {booking.adminNotes ? (
+            <div className="mt-6 rounded-xl border bg-gray-50 px-4 py-3">
+              <p className="text-xs text-gray-500">Admin Notes</p>
+              <p className="text-sm text-gray-800">{booking.adminNotes}</p>
             </div>
           ) : null}
 

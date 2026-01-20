@@ -30,6 +30,8 @@ export type Booking = {
   transport?: TransportOption;
   pickupNotes?: string;
 
-  driver: "to_be_assigned" | string; // placeholder for later
-  addOns?: TourAddOns; // optional if you later add add-ons back
+  driver: "to_be_assigned" | "not_included" | string;
+  addOns?: TourAddOns;
+
+  adminNotes?: string;
 };

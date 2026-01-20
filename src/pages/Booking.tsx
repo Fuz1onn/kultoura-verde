@@ -1,45 +1,36 @@
 // src/pages/Booking.tsx
-import { useParams, useNavigate } from "react-router-dom";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
+import type { TransportOption, TourAddOns } from "@/types/booking";
 import { createBooking } from "@/lib/bookings";
-import type {
-  Booking as BookingType,
-  TransportOption,
-  TourAddOns,
-} from "@/types/booking";
-
-const serviceMap: Record<string, string> = {
-  pottery: "Pottery Making",
-  cuisine: "Local Cuisine Making",
-  weaving: "Weaving",
-  farming: "Farming",
-};
-
-const instructorNameMap: Record<string, string> = {
-  "maria-santos": "Maria Santos",
-  "jon-reyes": "Jon Reyes",
-  "luna-cruz": "Luna Cruz",
-  "ka-nilo": "Ka Nilo",
-  "ana-delosreyes": "Ana D.",
-  "paolo-vergara": "Paolo Vergara",
-  "althea-ramirez": "Althea Ramirez",
-  "tomas-bautista": "Tomas Bautista",
-  "mina-uy": "Mina Uy",
-  "chef-elia": "Chef Elia",
-  "tita-nene": "Tita Nene",
-  "marco-sy": "Marco Sy",
-};
+import { supabase } from "@/lib/supabaseClient";
+import { toast } from "sonner";
 
 const timeSlots = ["09:00 AM", "11:00 AM", "01:00 PM", "03:00 PM", "05:00 PM"];
 
+type ServiceRow = {
+  id: string;
+  slug: string;
+  name: string;
+};
+
+type InstructorRow = {
+  id: string;
+  name: string;
+  nickname: string | null;
+};
+
 export default function Booking() {
   const navigate = useNavigate();
-  const { serviceId, instructorId } = useParams();
+  const { serviceId, instructorId } = useParams(); // serviceId = slug, instructorId = UUID
 
-  const serviceName = serviceMap[serviceId ?? ""];
-  const instructorName = instructorNameMap[instructorId ?? ""];
+  const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState("");
+
+  const [service, setService] = useState<ServiceRow | null>(null);
+  const [instructor, setInstructor] = useState<InstructorRow | null>(null);
 
   const [date, setDate] = useState<Date | undefined>();
   const [time, setTime] = useState<string | null>(null);
@@ -54,15 +45,77 @@ export default function Booking() {
     pasalubongCenter: false,
   });
 
-  const [submitting, setSubmitting] = useState(false);
-  const [errorMsg, setErrorMsg] = useState("");
+  useEffect(() => {
+    const run = async () => {
+      if (!serviceId || !instructorId) return;
 
-  const isValid = useMemo(
-    () => Boolean(serviceName && instructorName),
-    [serviceName, instructorName],
-  );
+      try {
+        setErrorMsg("");
+        setLoading(true);
 
-  if (!isValid) {
+        // 1) Load service by slug
+        const { data: svc, error: svcErr } = await supabase
+          .from("services")
+          .select("id, slug, name")
+          .eq("slug", serviceId)
+          .single();
+
+        if (svcErr) throw svcErr;
+
+        // 2) Load instructor by UUID
+        const { data: inst, error: instErr } = await supabase
+          .from("instructors")
+          .select("id, name, nickname")
+          .eq("id", instructorId)
+          .single();
+
+        if (instErr) throw instErr;
+
+        // 3) Validate relationship (recommended)
+        const { data: link, error: linkErr } = await supabase
+          .from("service_instructors")
+          .select("service_id, instructor_id")
+          .eq("service_id", svc.id)
+          .eq("instructor_id", inst.id)
+          .maybeSingle();
+
+        if (linkErr) throw linkErr;
+        if (!link)
+          throw new Error("This instructor is not available for this service.");
+
+        setService(svc as ServiceRow);
+        setInstructor(inst as InstructorRow);
+      } catch (err: unknown) {
+        setErrorMsg(
+          err instanceof Error ? err.message : "Booking link is invalid.",
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    run();
+  }, [serviceId, instructorId]);
+
+  const displayInstructorName = useMemo(() => {
+    if (!instructor) return "";
+    return instructor.nickname
+      ? `${instructor.nickname} • ${instructor.name}`
+      : instructor.name;
+  }, [instructor]);
+
+  const transportLabel =
+    transport === "jeepney"
+      ? "Jeepney"
+      : transport === "tricycle"
+        ? "Tricycle"
+        : transport === "van"
+          ? "Van"
+          : "";
+
+  const canSubmit = Boolean(date && time && service && instructor);
+
+  if (!serviceId || !instructorId) {
     return (
       <section className="min-h-screen bg-gray-50 text-gray-900 pt-32 pb-24">
         <div className="mx-auto max-w-6xl px-6 md:px-8 text-center">
@@ -78,23 +131,41 @@ export default function Booking() {
     );
   }
 
-  const transportLabel =
-    transport === "jeepney"
-      ? "Jeepney"
-      : transport === "tricycle"
-        ? "Tricycle"
-        : transport === "van"
-          ? "Van"
-          : "";
+  if (loading) {
+    return (
+      <section className="min-h-screen bg-gray-50 text-gray-900 pt-32 pb-24">
+        <div className="mx-auto max-w-4xl px-6 md:px-8">
+          <div className="rounded-2xl bg-white border p-6 md:p-8">
+            <div className="h-6 w-64 rounded bg-gray-200 animate-pulse" />
+            <div className="mt-3 h-4 w-80 rounded bg-gray-200 animate-pulse" />
+            <div className="mt-8 h-64 w-full rounded-2xl bg-gray-200 animate-pulse" />
+          </div>
+        </div>
+      </section>
+    );
+  }
 
-  // ✅ Transportation no longer required
-  const canSubmit = Boolean(date && time) && !submitting;
+  if (errorMsg || !service || !instructor) {
+    return (
+      <section className="min-h-screen bg-gray-50 text-gray-900 pt-32 pb-24">
+        <div className="mx-auto max-w-6xl px-6 md:px-8 text-center">
+          <h1 className="text-2xl font-semibold">Booking link is invalid</h1>
+          <p className="mt-2 text-gray-600">
+            {errorMsg || "Please try again."}
+          </p>
+          <Button className="mt-6" onClick={() => navigate("/services")}>
+            Back to Services
+          </Button>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="relative min-h-screen bg-gray-50 text-gray-900 pt-32 pb-24">
       <div className="mx-auto max-w-4xl px-6 md:px-8">
         <button
-          onClick={() => navigate(`/services/${serviceId}/instructors`)}
+          onClick={() => navigate(`/services/${service.slug}/instructors`)}
           className="mb-6 inline-flex items-center text-sm text-gray-600 hover:text-green-700 transition-colors"
         >
           ← Back to Instructors
@@ -105,8 +176,10 @@ export default function Booking() {
         </h1>
 
         <p className="text-sm text-gray-600 mb-6">
-          <span className="font-medium text-gray-900">{serviceName}</span> with{" "}
-          <span className="font-medium text-gray-900">{instructorName}</span>
+          <span className="font-medium text-gray-900">{service.name}</span> with{" "}
+          <span className="font-medium text-gray-900">
+            {displayInstructorName}
+          </span>
         </p>
 
         {/* Summary line */}
@@ -128,21 +201,13 @@ export default function Booking() {
         </div>
 
         <div className="rounded-2xl bg-white border p-6 md:p-8">
-          {errorMsg ? (
-            <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {errorMsg}
-            </div>
-          ) : null}
-
           {/* Date */}
           <div className="mb-10">
             <h2 className="text-lg font-medium mb-4">1. Select a Date</h2>
             <Calendar
               mode="single"
               selected={date}
-              onSelect={(d) => {
-                if (d) setDate(d);
-              }}
+              onSelect={(d) => d && setDate(d)}
               disabled={(d) => {
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
@@ -219,11 +284,7 @@ export default function Booking() {
                     type="button"
                     onClick={() => setTransport(opt.id as TransportOption)}
                     className={`rounded-xl border px-4 py-3 text-sm transition text-left
-                      ${
-                        isSelected
-                          ? "border-green-600 bg-green-50"
-                          : "hover:border-green-600 hover:bg-gray-50"
-                      }`}
+                      ${isSelected ? "border-green-600 bg-green-50" : "hover:border-green-600 hover:bg-gray-50"}`}
                   >
                     <div className="font-medium text-gray-900">{opt.label}</div>
                     <div className="text-xs text-gray-600 mt-1">
@@ -234,7 +295,6 @@ export default function Booking() {
               })}
             </div>
 
-            {/* Pickup notes only when transport is selected */}
             {transport ? (
               <div className="mt-6">
                 <label className="block text-sm font-medium text-gray-900 mb-2">
@@ -273,11 +333,7 @@ export default function Booking() {
                   }))
                 }
                 className={`rounded-xl border px-4 py-3 text-left transition
-                  ${
-                    addOns.placesToEat
-                      ? "border-green-600 bg-green-50"
-                      : "hover:border-green-600 hover:bg-gray-50"
-                  }`}
+                  ${addOns.placesToEat ? "border-green-600 bg-green-50" : "hover:border-green-600 hover:bg-gray-50"}`}
               >
                 <div className="flex items-center justify-between gap-4">
                   <div>
@@ -309,11 +365,7 @@ export default function Booking() {
                   }))
                 }
                 className={`rounded-xl border px-4 py-3 text-left transition
-                  ${
-                    addOns.pasalubongCenter
-                      ? "border-green-600 bg-green-50"
-                      : "hover:border-green-600 hover:bg-gray-50"
-                  }`}
+                  ${addOns.pasalubongCenter ? "border-green-600 bg-green-50" : "hover:border-green-600 hover:bg-gray-50"}`}
               >
                 <div className="flex items-center justify-between gap-4">
                   <div>
@@ -344,21 +396,16 @@ export default function Booking() {
             disabled={!canSubmit}
             className="w-full md:w-auto bg-green-600 text-white hover:bg-green-700"
             onClick={async () => {
-              if (!date || !time || !serviceId || !instructorId) return;
-
               try {
-                setErrorMsg("");
-                setSubmitting(true);
+                const dateISO = date!.toISOString().slice(0, 10);
 
-                const dateISO = date.toISOString().slice(0, 10);
-
-                const saved = await createBooking({
-                  serviceId,
-                  serviceName,
-                  instructorId,
-                  instructorName,
+                const booking = await createBooking({
+                  serviceId: service.id,
+                  serviceName: service.name,
+                  instructorId: instructor.id,
+                  instructorName: instructor.name,
                   dateISO,
-                  timeLabel: time,
+                  timeLabel: time!,
                   transport: transport ?? undefined,
                   pickupNotes: transport
                     ? pickupNotes.trim() || undefined
@@ -369,24 +416,18 @@ export default function Booking() {
                   },
                 });
 
-                // Keep your old "state" behavior (optional)
-                const bookingForState: BookingType = saved;
-
-                navigate(`/booking/requested/${saved.id}`, {
-                  state: { booking: bookingForState },
-                });
+                toast.success("Booking request sent!");
+                navigate(`/booking/requested/${booking.id}`);
               } catch (err: unknown) {
-                setErrorMsg(
+                toast.error(
                   err instanceof Error
                     ? err.message
                     : "Failed to create booking.",
                 );
-              } finally {
-                setSubmitting(false);
               }
             }}
           >
-            {submitting ? "Requesting..." : "Request Booking"}
+            Request Booking
           </Button>
 
           <p className="mt-4 text-xs text-gray-500">
