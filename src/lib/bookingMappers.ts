@@ -1,5 +1,9 @@
 // src/lib/bookingMappers.ts
-import type { Booking, BookingStatus, TourAddOns, TransportOption } from "@/types/booking";
+import type {
+  Booking,
+  BookingStatus,
+  TransportOption,
+} from "@/types/booking";
 
 export type BookingRow = {
   id: string;
@@ -20,7 +24,9 @@ export type BookingRow = {
   pickup_notes: string | null;
 
   driver: string;
-  add_ons: TourAddOns | null;
+
+  places_to_eat_stop_id: string | null;
+  pasalubong_stop_id: string | null;
 
   admin_notes: string | null;
   confirmed_at: string | null;
@@ -50,7 +56,9 @@ export function rowToBooking(row: BookingRow): Booking {
     pickupNotes: row.pickup_notes ?? undefined,
 
     driver: row.driver,
-    addOns: row.add_ons ?? undefined,
+
+    placesToEatStopId: row.places_to_eat_stop_id ?? undefined,
+    pasalubongStopId: row.pasalubong_stop_id ?? undefined,
   };
 }
 
@@ -73,7 +81,8 @@ export type CreateBookingParams = {
 
   driver?: string;
 
-  addOns?: TourAddOns;
+  placesToEatStopId?: string | null;
+  pasalubongStopId?: string | null;
 };
 
 export function bookingToInsertRow(
@@ -98,7 +107,8 @@ export function bookingToInsertRow(
 
     driver: params.driver ?? "to_be_assigned",
 
-    add_ons: params.addOns ?? null,
+    places_to_eat_stop_id: params.placesToEatStopId ?? null,
+    pasalubong_stop_id: params.pasalubongStopId ?? null,
 
     admin_notes: null,
     confirmed_at: null,

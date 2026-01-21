@@ -1,6 +1,6 @@
 // src/lib/bookings.ts
 import { supabase } from "@/lib/supabaseClient";
-import type { Booking, TourAddOns, TransportOption } from "@/types/booking";
+import type { Booking, TransportOption } from "@/types/booking";
 import {
   bookingToInsertRow,
   rowToBooking,
@@ -14,14 +14,17 @@ type CreateBookingInput = {
   instructorId: string;
   instructorName: string;
 
-  dateISO: string; // YYYY-MM-DD
+  dateISO: string;
   timeLabel: string;
 
   transport?: TransportOption;
   pickupNotes?: string;
 
-  addOns?: TourAddOns;
+  // ✅ NEW (real data)
+  placesToEatStopId?: string | null;
+  pasalubongStopId?: string | null;
 };
+
 
 function errorMessage(err: unknown): string {
   if (err instanceof Error) return err.message;
@@ -52,7 +55,8 @@ export async function createBooking(input: CreateBookingInput): Promise<Booking>
     transport: input.transport,
     pickupNotes: input.pickupNotes,
 
-    addOns: input.addOns,
+    placesToEatStopId: input.placesToEatStopId,
+  pasalubongStopId: input.pasalubongStopId,
   });
 
   const { data, error } = await supabase

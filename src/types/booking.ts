@@ -31,7 +31,8 @@ export type Booking = {
   pickupNotes?: string;
 
   driver: "to_be_assigned" | "not_included" | string;
-  addOns?: TourAddOns;
+  placesToEatStopId?: string | null;
+  pasalubongStopId?: string | null;
 
   adminNotes?: string;
 };

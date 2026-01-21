@@ -1,12 +1,13 @@
 // src/pages/Booking.tsx
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
-import type { TransportOption, TourAddOns } from "@/types/booking";
+import type { TransportOption } from "@/types/booking";
 import { createBooking } from "@/lib/bookings";
 import { supabase } from "@/lib/supabaseClient";
 import { toast } from "sonner";
+import { listTourStops, type TourStop } from "@/lib/tourStops";
 
 const timeSlots = ["09:00 AM", "11:00 AM", "01:00 PM", "03:00 PM", "05:00 PM"];
 
@@ -21,6 +22,13 @@ type InstructorRow = {
   name: string;
   nickname: string | null;
 };
+
+type PickTourStopState = {
+  pickTourStop?: {
+    id: string;
+    category: "places_to_eat" | "pasalubong_center";
+  };
+} | null;
 
 export default function Booking() {
   const navigate = useNavigate();
@@ -39,11 +47,37 @@ export default function Booking() {
   const [transport, setTransport] = useState<TransportOption | null>(null);
   const [pickupNotes, setPickupNotes] = useState<string>("");
 
-  // Optional tour add-ons
-  const [addOns, setAddOns] = useState<TourAddOns>({
-    placesToEat: false,
-    pasalubongCenter: false,
-  });
+  const [restaurants, setRestaurants] = useState<TourStop[]>([]);
+  const [pasalubong, setPasalubong] = useState<TourStop[]>([]);
+  const [selectedRestaurant, setSelectedRestaurant] = useState<string | null>(
+    null,
+  );
+  const [selectedPasalubong, setSelectedPasalubong] = useState<string | null>(
+    null,
+  );
+
+  const location = useLocation();
+
+  useEffect(() => {
+    const state = location.state as PickTourStopState;
+    const pick = state?.pickTourStop;
+    if (!pick) return;
+
+    if (pick.category === "places_to_eat") {
+      setSelectedRestaurant(pick.id);
+    } else if (pick.category === "pasalubong_center") {
+      setSelectedPasalubong(pick.id);
+    }
+
+    // ✅ clear state so it doesn’t re-apply on refresh/back
+    navigate(location.pathname, { replace: true, state: null });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state]);
+
+  useEffect(() => {
+    listTourStops("places_to_eat").then(setRestaurants);
+    listTourStops("pasalubong_center").then(setPasalubong);
+  }, []);
 
   useEffect(() => {
     const run = async () => {
@@ -314,79 +348,161 @@ export default function Booking() {
             ) : null}
           </div>
 
-          {/* Optional Tour Add-ons */}
-          <div className="mb-10">
-            <h2 className="text-lg font-medium mb-2">
-              Tour Add-ons (Optional)
-            </h2>
-            <p className="text-sm text-gray-600 mb-4">
-              Add quick stops to enhance your experience.
+          {/* Tour Add-ons */}
+          <div className="mb-14">
+            <h2 className="text-xl font-semibold mb-2">Tour Add-ons</h2>
+            <p className="text-sm text-gray-600 mb-6">
+              Optional stops you can include in your booking to enhance the
+              experience.
             </p>
 
-            <div className="grid gap-3 sm:grid-cols-2">
-              <button
-                type="button"
-                onClick={() =>
-                  setAddOns((prev) => ({
-                    ...prev,
-                    placesToEat: !prev.placesToEat,
-                  }))
-                }
-                className={`rounded-xl border px-4 py-3 text-left transition
-                  ${addOns.placesToEat ? "border-green-600 bg-green-50" : "hover:border-green-600 hover:bg-gray-50"}`}
-              >
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <div className="font-medium text-gray-900">
-                      Places to Eat
-                    </div>
-                    <div className="mt-1 text-xs text-gray-600">
-                      Recommendations and optional food stops.
-                    </div>
-                  </div>
-                  <span
-                    className={`text-xs font-medium rounded-full px-2 py-1 ${
-                      addOns.placesToEat
-                        ? "bg-green-600 text-white"
-                        : "bg-gray-100 text-gray-700"
-                    }`}
-                  >
-                    {addOns.placesToEat ? "Added" : "Add"}
-                  </span>
-                </div>
-              </button>
+            {/* Places to Eat */}
+            <div className="mb-10">
+              <div className="mb-4">
+                <h3 className="text-base font-medium text-gray-900">
+                  🍽️ Places to Eat (Optional)
+                </h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  Select one restaurant to include during your tour.
+                </p>
+              </div>
 
-              <button
-                type="button"
-                onClick={() =>
-                  setAddOns((prev) => ({
-                    ...prev,
-                    pasalubongCenter: !prev.pasalubongCenter,
-                  }))
-                }
-                className={`rounded-xl border px-4 py-3 text-left transition
-                  ${addOns.pasalubongCenter ? "border-green-600 bg-green-50" : "hover:border-green-600 hover:bg-gray-50"}`}
-              >
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <div className="font-medium text-gray-900">
-                      Pasalubong Center
-                    </div>
-                    <div className="mt-1 text-xs text-gray-600">
-                      Optional stop for souvenirs and delicacies.
-                    </div>
-                  </div>
-                  <span
-                    className={`text-xs font-medium rounded-full px-2 py-1 ${
-                      addOns.pasalubongCenter
-                        ? "bg-green-600 text-white"
-                        : "bg-gray-100 text-gray-700"
-                    }`}
-                  >
-                    {addOns.pasalubongCenter ? "Added" : "Add"}
-                  </span>
-                </div>
-              </button>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {restaurants.map((r) => {
+                  const isSelected = selectedRestaurant === r.id;
+
+                  return (
+                    <button
+                      key={r.id}
+                      type="button"
+                      onClick={() =>
+                        setSelectedRestaurant(isSelected ? null : r.id)
+                      }
+                      className={`group rounded-xl border px-4 py-4 text-left transition
+            ${
+              isSelected
+                ? "border-green-600 bg-green-50"
+                : "border-gray-200 hover:border-green-600 hover:bg-gray-50"
+            }`}
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="min-w-0">
+                          <p className="font-medium text-gray-900 truncate">
+                            {r.name}
+                          </p>
+
+                          {r.description && (
+                            <p className="mt-1 text-xs text-gray-600 line-clamp-2">
+                              {r.description}
+                            </p>
+                          )}
+
+                          {/* View details */}
+                          <span
+                            onClick={(e) => {
+                              e.stopPropagation();
+
+                              const returnTo =
+                                location.pathname + location.search;
+
+                              navigate(`/tour-stop/${r.id}`, {
+                                state: { returnTo },
+                              });
+                            }}
+                            className="mt-2 inline-block text-xs text-green-700 hover:underline cursor-pointer"
+                          >
+                            View details →
+                          </span>
+                        </div>
+
+                        <span
+                          className={`shrink-0 text-xs font-medium rounded-full px-2 py-1
+                ${
+                  isSelected
+                    ? "bg-green-600 text-white"
+                    : "bg-gray-100 text-gray-700 group-hover:bg-gray-200"
+                }`}
+                        >
+                          {isSelected ? "Selected" : "Select"}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Divider */}
+            <div className="h-px bg-gray-200 my-10" />
+
+            {/* Pasalubong Center */}
+            <div>
+              <div className="mb-4">
+                <h3 className="text-base font-medium text-gray-900">
+                  🛍️ Pasalubong Center (Optional)
+                </h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  Choose one stop for local delicacies and souvenirs.
+                </p>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                {pasalubong.map((p) => {
+                  const isSelected = selectedPasalubong === p.id;
+
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() =>
+                        setSelectedPasalubong(isSelected ? null : p.id)
+                      }
+                      className={`group rounded-xl border px-4 py-4 text-left transition
+            ${
+              isSelected
+                ? "border-green-600 bg-green-50"
+                : "border-gray-200 hover:border-green-600 hover:bg-gray-50"
+            }`}
+                    >
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="min-w-0">
+                          <p className="font-medium text-gray-900 truncate">
+                            {p.name}
+                          </p>
+
+                          {/* View details */}
+                          <span
+                            onClick={(e) => {
+                              e.stopPropagation();
+
+                              const returnTo =
+                                location.pathname + location.search;
+
+                              navigate(`/tour-stop/${p.id}`, {
+                                state: { returnTo },
+                              });
+                            }}
+                            className="mt-1 inline-block text-xs text-green-700 hover:underline cursor-pointer"
+                          >
+                            View details →
+                          </span>
+                        </div>
+
+                        <span
+                          className={`text-xs font-medium rounded-full px-2 py-1
+                ${
+                  isSelected
+                    ? "bg-green-600 text-white"
+                    : "bg-gray-100 text-gray-700 group-hover:bg-gray-200"
+                }`}
+                        >
+                          {isSelected ? "Selected" : "Select"}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
 
@@ -410,10 +526,8 @@ export default function Booking() {
                   pickupNotes: transport
                     ? pickupNotes.trim() || undefined
                     : undefined,
-                  addOns: {
-                    placesToEat: addOns.placesToEat,
-                    pasalubongCenter: addOns.pasalubongCenter,
-                  },
+                  placesToEatStopId: selectedRestaurant,
+                  pasalubongStopId: selectedPasalubong,
                 });
 
                 toast.success("Booking request sent!");

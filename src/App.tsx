@@ -15,6 +15,7 @@ import InstructorProfile from "@/pages/InstructorProfile";
 
 import RequireAuth from "@/routes/RequireAuth";
 import RequireAdmin from "@/routes/RequireAdmin";
+import TourStopProfile from "@/pages/TourStopProfile";
 
 export default function App() {
   return (
@@ -45,6 +46,8 @@ export default function App() {
             element={<BookingRequested />}
           />
           <Route path="/bookings" element={<Bookings />} />
+          <Route path="/tour-stop/:id" element={<TourStopProfile />} />
+
           <Route element={<RequireAdmin />}>
             <Route path="/admin/bookings" element={<AdminBookings />} />
           </Route>
