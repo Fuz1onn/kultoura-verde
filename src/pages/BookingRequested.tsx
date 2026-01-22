@@ -23,16 +23,6 @@ function transportLabel(t?: TransportOption) {
   return "Van";
 }
 
-function addOnsLabel(addOns?: Booking["addOns"]) {
-  if (!addOns) return null;
-  const items = [
-    addOns.placesToEat ? "Places to Eat" : null,
-    addOns.pasalubongCenter ? "Pasalubong Center" : null,
-  ].filter(Boolean) as string[];
-
-  return items.length ? items.join(", ") : null;
-}
-
 function statusPill(status: BookingStatus) {
   switch (status) {
     case "pending":
@@ -190,7 +180,16 @@ export default function BookingRequested() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookingId, bookingFromState]);
 
-  const addOns = useMemo(() => addOnsLabel(booking?.addOns), [booking]);
+  const addOns = useMemo(() => {
+    if (!booking) return null;
+
+    const items = [
+      booking.placesToEatStopId ? "Places to Eat" : null,
+      booking.pasalubongStopId ? "Pasalubong Center" : null,
+    ].filter(Boolean) as string[];
+
+    return items.length ? items.join(", ") : null;
+  }, [booking?.placesToEatStopId, booking?.pasalubongStopId]);
 
   if (!bookingId) {
     return (

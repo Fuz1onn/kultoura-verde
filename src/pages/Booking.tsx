@@ -60,19 +60,37 @@ export default function Booking() {
 
   useEffect(() => {
     const state = location.state as PickTourStopState;
-    const pick = state?.pickTourStop;
-    if (!pick) return;
+    let pick = state?.pickTourStop ?? null;
+
+    if (!pick) {
+      const raw = sessionStorage.getItem("kv_pickTourStop");
+      if (raw) {
+        try {
+          pick = JSON.parse(raw);
+        } catch {
+          // ignore
+        }
+      }
+    }
+
+    if (!pick?.id || !pick?.category) return;
 
     if (pick.category === "places_to_eat") {
       setSelectedRestaurant(pick.id);
+      toast.success("Restaurant selected");
     } else if (pick.category === "pasalubong_center") {
       setSelectedPasalubong(pick.id);
+      toast.success("Pasalubong center selected");
     }
 
-    // ✅ clear state so it doesn’t re-apply on refresh/back
-    navigate(location.pathname, { replace: true, state: null });
+    sessionStorage.removeItem("kv_pickTourStop");
+    navigate(location.pathname + location.search, {
+      replace: true,
+      state: null,
+    });
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.state]);
+  }, [location.key]);
 
   useEffect(() => {
     listTourStops("places_to_eat").then(setRestaurants);
@@ -404,6 +422,10 @@ export default function Booking() {
 
                               const returnTo =
                                 location.pathname + location.search;
+                              sessionStorage.setItem(
+                                "kv_bookingReturnTo",
+                                returnTo,
+                              );
 
                               navigate(`/tour-stop/${r.id}`, {
                                 state: { returnTo },
@@ -477,6 +499,10 @@ export default function Booking() {
 
                               const returnTo =
                                 location.pathname + location.search;
+                              sessionStorage.setItem(
+                                "kv_bookingReturnTo",
+                                returnTo,
+                              );
 
                               navigate(`/tour-stop/${p.id}`, {
                                 state: { returnTo },

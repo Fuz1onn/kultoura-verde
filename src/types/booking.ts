@@ -8,11 +8,6 @@ export type BookingStatus =
 
 export type TransportOption = "jeepney" | "tricycle" | "van";
 
-export type TourAddOns = {
-  placesToEat: boolean;
-  pasalubongCenter: boolean;
-};
-
 export type Booking = {
   id: string;
   createdAt: string; // ISO
@@ -31,6 +26,7 @@ export type Booking = {
   pickupNotes?: string;
 
   driver: "to_be_assigned" | "not_included" | string;
+
   placesToEatStopId?: string | null;
   pasalubongStopId?: string | null;
 

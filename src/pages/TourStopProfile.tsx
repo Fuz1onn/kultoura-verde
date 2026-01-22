@@ -18,12 +18,15 @@ type TourStop = {
 export default function TourStopProfile() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [item, setItem] = useState<TourStop | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const location = useLocation();
-  const returnTo = (location.state as any)?.returnTo as string | undefined;
+  const returnTo =
+    ((location.state as any)?.returnTo as string | undefined) ??
+    sessionStorage.getItem("kv_bookingReturnTo") ??
+    undefined;
 
   useEffect(() => {
     if (!id) return;
@@ -49,6 +52,33 @@ export default function TourStopProfile() {
 
   const images = useMemo(() => item?.image_urls ?? [], [item]);
 
+  const goBack = () => {
+    navigate(returnTo ?? "/services");
+  };
+
+  const addToBooking = () => {
+    if (!item) return;
+
+    const payload = {
+      id: item.id,
+      category: item.category,
+    };
+
+    // ✅ Fallback in case router state is lost (auth guards, redirects, etc.)
+    sessionStorage.setItem("kv_pickTourStop", JSON.stringify(payload));
+
+    navigate(returnTo ?? "/services", {
+      replace: true,
+      state: { pickTourStop: payload },
+    });
+  };
+
+  const browseServices = () => {
+    // prevent stale back-to-booking behavior if user leaves the flow
+    sessionStorage.removeItem("kv_bookingReturnTo");
+    navigate("/services");
+  };
+
   if (loading) {
     return (
       <section className="min-h-screen bg-gray-50 pt-32 pb-24">
@@ -73,7 +103,7 @@ export default function TourStopProfile() {
       <section className="min-h-screen bg-gray-50 pt-32 pb-24">
         <div className="mx-auto max-w-5xl px-6 md:px-8">
           <button
-            onClick={() => navigate(-1)}
+            onClick={goBack}
             className="mb-6 text-sm text-gray-600 hover:text-green-700"
           >
             ← Back
@@ -93,7 +123,7 @@ export default function TourStopProfile() {
         {/* Top bar */}
         <div className="mb-6 flex items-center justify-between gap-4">
           <button
-            onClick={() => navigate(-1)}
+            onClick={goBack}
             className="text-sm text-gray-600 hover:text-green-700"
           >
             ← Back to Booking
@@ -168,25 +198,13 @@ export default function TourStopProfile() {
                 {/* CTA */}
                 <div className="mt-8 flex flex-col sm:flex-row gap-3">
                   <Button
-                    onClick={() => {
-                      navigate(returnTo ?? "/services", {
-                        state: {
-                          pickTourStop: {
-                            id: item.id,
-                            category: item.category,
-                          },
-                        },
-                      });
-                    }}
+                    onClick={addToBooking}
                     className="bg-green-600 text-white hover:bg-green-700"
                   >
                     Add to Booking
                   </Button>
 
-                  <Button
-                    variant="outline"
-                    onClick={() => navigate("/services")}
-                  >
+                  <Button variant="outline" onClick={browseServices}>
                     Browse Services
                   </Button>
                 </div>
@@ -203,19 +221,13 @@ export default function TourStopProfile() {
 
               <div className="mt-8 flex flex-col sm:flex-row gap-3">
                 <Button
-                  onClick={() => {
-                    navigate(returnTo ?? "/services", {
-                      state: {
-                        pickTourStop: {
-                          id: item.id,
-                          category: item.category,
-                        },
-                      },
-                    });
-                  }}
+                  onClick={addToBooking}
                   className="bg-green-600 text-white hover:bg-green-700"
                 >
                   Add to Booking
+                </Button>
+                <Button variant="outline" onClick={browseServices}>
+                  Browse Services
                 </Button>
               </div>
             </div>
@@ -239,25 +251,16 @@ export default function TourStopProfile() {
           ) : null}
         </div>
 
-        {/* Mobile sticky CTA (optional but nice) */}
+        {/* Mobile sticky CTA */}
         <div className="sm:hidden fixed bottom-4 left-0 right-0 px-4">
           <div className="mx-auto max-w-5xl rounded-2xl border bg-white shadow-lg p-3 flex gap-3">
             <Button
-              onClick={() => {
-                navigate(returnTo ?? "/services", {
-                  state: {
-                    pickTourStop: {
-                      id: item.id,
-                      category: item.category,
-                    },
-                  },
-                });
-              }}
+              onClick={addToBooking}
               className="flex-1 bg-green-600 text-white hover:bg-green-700"
             >
               Add to Booking
             </Button>
-            <Button variant="outline" onClick={() => navigate(-1)}>
+            <Button variant="outline" onClick={goBack}>
               Back
             </Button>
           </div>

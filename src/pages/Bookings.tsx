@@ -39,16 +39,6 @@ function transportLabel(t?: TransportOption) {
   return "Van";
 }
 
-function addOnsLabel(addOns?: Booking["addOns"]) {
-  if (!addOns) return null;
-  const items = [
-    addOns.placesToEat ? "Places to Eat" : null,
-    addOns.pasalubongCenter ? "Pasalubong Center" : null,
-  ].filter(Boolean) as string[];
-
-  return items.length ? items.join(", ") : null;
-}
-
 export default function Bookings() {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
@@ -248,7 +238,14 @@ export default function Bookings() {
         ) : (
           <div className="grid gap-4">
             {filtered.map((b) => {
-              const addOns = addOnsLabel(b.addOns);
+              const addOns =
+                [
+                  b.placesToEatStopId ? "Places to Eat" : null,
+                  b.pasalubongStopId ? "Pasalubong Center" : null,
+                ]
+                  .filter(Boolean)
+                  .join(", ") || null;
+
               const canCancel =
                 b.status === "pending" || b.status === "confirmed";
               const isBusy = busyId === b.id;
