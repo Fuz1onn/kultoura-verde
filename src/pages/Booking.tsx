@@ -58,6 +58,13 @@ export default function Booking() {
 
   const location = useLocation();
 
+  const toLocalISODate = (d: Date) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  };
+
   useEffect(() => {
     const state = location.state as PickTourStopState;
     let pick = state?.pickTourStop ?? null;
@@ -397,15 +404,15 @@ export default function Booking() {
                         setSelectedRestaurant(isSelected ? null : r.id)
                       }
                       className={`group rounded-xl border px-4 py-4 text-left transition
-            ${
-              isSelected
-                ? "border-green-600 bg-green-50"
-                : "border-gray-200 hover:border-green-600 hover:bg-gray-50"
-            }`}
+              ${
+                isSelected
+                  ? "border-green-600 bg-green-50"
+                  : "border-gray-200 hover:border-green-600 hover:bg-gray-50"
+              }`}
                     >
                       <div className="flex items-start justify-between gap-4">
                         <div className="min-w-0">
-                          <p className="font-medium text-gray-900 truncate">
+                          <p className="font-medium text-gray-900 break-words leading-snug sm:truncate">
                             {r.name}
                           </p>
 
@@ -439,11 +446,11 @@ export default function Booking() {
 
                         <span
                           className={`shrink-0 text-xs font-medium rounded-full px-2 py-1
-                ${
-                  isSelected
-                    ? "bg-green-600 text-white"
-                    : "bg-gray-100 text-gray-700 group-hover:bg-gray-200"
-                }`}
+                  ${
+                    isSelected
+                      ? "bg-green-600 text-white"
+                      : "bg-gray-100 text-gray-700 group-hover:bg-gray-200"
+                  }`}
                         >
                           {isSelected ? "Selected" : "Select"}
                         </span>
@@ -480,15 +487,15 @@ export default function Booking() {
                         setSelectedPasalubong(isSelected ? null : p.id)
                       }
                       className={`group rounded-xl border px-4 py-4 text-left transition
-            ${
-              isSelected
-                ? "border-green-600 bg-green-50"
-                : "border-gray-200 hover:border-green-600 hover:bg-gray-50"
-            }`}
+              ${
+                isSelected
+                  ? "border-green-600 bg-green-50"
+                  : "border-gray-200 hover:border-green-600 hover:bg-gray-50"
+              }`}
                     >
-                      <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-start justify-between gap-4">
                         <div className="min-w-0">
-                          <p className="font-medium text-gray-900 truncate">
+                          <p className="font-medium text-gray-900 break-words leading-snug sm:truncate">
                             {p.name}
                           </p>
 
@@ -515,12 +522,12 @@ export default function Booking() {
                         </div>
 
                         <span
-                          className={`text-xs font-medium rounded-full px-2 py-1
-                ${
-                  isSelected
-                    ? "bg-green-600 text-white"
-                    : "bg-gray-100 text-gray-700 group-hover:bg-gray-200"
-                }`}
+                          className={`shrink-0 text-xs font-medium rounded-full px-2 py-1
+                  ${
+                    isSelected
+                      ? "bg-green-600 text-white"
+                      : "bg-gray-100 text-gray-700 group-hover:bg-gray-200"
+                  }`}
                         >
                           {isSelected ? "Selected" : "Select"}
                         </span>
@@ -539,7 +546,7 @@ export default function Booking() {
             className="w-full md:w-auto bg-green-600 text-white hover:bg-green-700"
             onClick={async () => {
               try {
-                const dateISO = date!.toISOString().slice(0, 10);
+                const dateISO = toLocalISODate(date!);
 
                 const booking = await createBooking({
                   serviceId: service.id,
