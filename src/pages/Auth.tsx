@@ -124,7 +124,7 @@ export default function Auth() {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     className="mt-2 w-full rounded-xl border px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-green-600/30"
-                    placeholder="e.g., Khalil Acebuche"
+                    placeholder="e.g., John Doe"
                   />
                 </div>
               )}
