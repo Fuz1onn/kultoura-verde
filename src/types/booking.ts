@@ -10,7 +10,7 @@ export type TransportOption = "jeepney" | "tricycle" | "van";
 
 export type Booking = {
   id: string;
-  createdAt: string; // ISO
+  createdAt: string;
   status: BookingStatus;
 
   serviceId: string;
@@ -19,13 +19,16 @@ export type Booking = {
   instructorId: string;
   instructorName: string;
 
-  dateISO: string; // YYYY-MM-DD
+  dateISO: string;
   timeLabel: string;
 
   transport?: TransportOption;
   pickupNotes?: string;
 
   driver: "to_be_assigned" | "not_included" | string;
+
+  // ✅ ADD THIS
+  driverId?: string | null;
 
   placesToEatStopId?: string | null;
   pasalubongStopId?: string | null;

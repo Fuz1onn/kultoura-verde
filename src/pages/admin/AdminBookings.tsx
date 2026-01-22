@@ -10,6 +10,7 @@ import {
   adminCompleteBooking,
   type AdminBooking,
 } from "@/lib/bookingsAdmin";
+import { supabase } from "@/lib/supabaseClient";
 
 function statusPill(status: BookingStatus) {
   switch (status) {
@@ -52,6 +53,15 @@ export default function AdminBookings() {
   const [notesDraft, setNotesDraft] = useState<Record<string, string>>({});
   const [busyId, setBusyId] = useState<string>("");
 
+  type Driver = {
+    id: string;
+    full_name: string;
+    vehicle_type: TransportOption;
+    years_experience: number;
+  };
+
+  const [drivers, setDrivers] = useState<Driver[]>([]);
+
   const load = async () => {
     try {
       setErrorMsg("");
@@ -69,6 +79,22 @@ export default function AdminBookings() {
   };
 
   useEffect(() => {
+    const loadDrivers = async () => {
+      const { data, error } = await supabase
+        .from("drivers")
+        .select("id, full_name, vehicle_type, years_experience")
+        .eq("is_active", true)
+        .order("full_name");
+
+      if (!error && data) {
+        setDrivers(data as Driver[]);
+      }
+    };
+
+    loadDrivers();
+  }, []);
+
+  useEffect(() => {
     load();
   }, []);
 
@@ -76,10 +102,14 @@ export default function AdminBookings() {
     try {
       setBusyId(id);
 
-      const driverName = (driverDraft[id] ?? "").trim() || undefined;
+      const driverId = driverDraft[id] || undefined;
       const adminNotes = (notesDraft[id] ?? "").trim() || undefined;
 
-      await adminConfirmBooking({ id, driverName, adminNotes });
+      await adminConfirmBooking({
+        id,
+        driverId,
+        adminNotes,
+      });
 
       toast.success("Booking confirmed", {
         description: "User has been notified by email.",
@@ -216,7 +246,9 @@ export default function AdminBookings() {
                         </div>
                         <div>
                           Driver:{" "}
-                          <span className="font-medium">{b.driver}</span>
+                          <span className="font-medium">
+                            {b.driverId ? "Assigned" : "Not assigned"}
+                          </span>
                         </div>
                         <div className="text-xs text-gray-500">
                           User: <span className="font-mono">{b.userId}</span>
@@ -225,7 +257,7 @@ export default function AdminBookings() {
                     </div>
 
                     <div className="w-full md:w-90 space-y-3">
-                      <input
+                      <select
                         value={driverDraft[b.id] ?? ""}
                         onChange={(e) =>
                           setDriverDraft((p) => ({
@@ -233,9 +265,23 @@ export default function AdminBookings() {
                             [b.id]: e.target.value,
                           }))
                         }
-                        placeholder="Driver name (optional)"
+                        disabled={b.status !== "pending"}
                         className="w-full rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-gray-200"
-                      />
+                      >
+                        <option value="">Select driver</option>
+
+                        {drivers
+                          .filter(
+                            (d) =>
+                              !b.transport || d.vehicle_type === b.transport,
+                          )
+                          .map((d) => (
+                            <option key={d.id} value={d.id}>
+                              {d.full_name} • {d.years_experience} yrs
+                            </option>
+                          ))}
+                      </select>
+
                       <textarea
                         value={notesDraft[b.id] ?? ""}
                         onChange={(e) =>

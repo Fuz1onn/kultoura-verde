@@ -1,9 +1,5 @@
 // src/lib/bookingMappers.ts
-import type {
-  Booking,
-  BookingStatus,
-  TransportOption,
-} from "@/types/booking";
+import type { Booking, BookingStatus, TransportOption } from "@/types/booking";
 
 export type BookingRow = {
   id: string;
@@ -24,6 +20,8 @@ export type BookingRow = {
   pickup_notes: string | null;
 
   driver: string;
+
+  driver_id?: string | null;
 
   places_to_eat_stop_id: string | null;
   pasalubong_stop_id: string | null;
@@ -57,8 +55,12 @@ export function rowToBooking(row: BookingRow): Booking {
 
     driver: row.driver,
 
+    driverId: (row as any).driver_id ?? null,
+
     placesToEatStopId: row.places_to_eat_stop_id ?? undefined,
     pasalubongStopId: row.pasalubong_stop_id ?? undefined,
+
+    adminNotes: row.admin_notes ?? undefined,
   };
 }
 

@@ -25,7 +25,6 @@ type CreateBookingInput = {
   pasalubongStopId?: string | null;
 };
 
-
 function errorMessage(err: unknown): string {
   if (err instanceof Error) return err.message;
   try {
@@ -35,7 +34,9 @@ function errorMessage(err: unknown): string {
   }
 }
 
-export async function createBooking(input: CreateBookingInput): Promise<Booking> {
+export async function createBooking(
+  input: CreateBookingInput,
+): Promise<Booking> {
   const { data: authData, error: authErr } = await supabase.auth.getUser();
   if (authErr) throw authErr;
   if (!authData.user) throw new Error("Not authenticated.");
@@ -56,7 +57,7 @@ export async function createBooking(input: CreateBookingInput): Promise<Booking>
     pickupNotes: input.pickupNotes,
 
     placesToEatStopId: input.placesToEatStopId,
-  pasalubongStopId: input.pasalubongStopId,
+    pasalubongStopId: input.pasalubongStopId,
   });
 
   const { data, error } = await supabase

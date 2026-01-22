@@ -1,3 +1,4 @@
+// src/pages/Bookings.tsx
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -7,6 +8,19 @@ import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/context/useAuth";
 
 type StatusFilter = "all" | "pending" | "confirmed" | "completed";
+
+type DriverMini = {
+  id: string;
+  full_name: string;
+  vehicle_type: TransportOption;
+  years_experience: number;
+};
+
+type TourStopMini = {
+  id: string;
+  name: string;
+  type: "places_to_eat" | "pasalubong_center";
+};
 
 function statusBadge(status: BookingStatus) {
   switch (status) {
@@ -49,6 +63,11 @@ export default function Bookings() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [busyId, setBusyId] = useState<string>("");
 
+  const [driversById, setDriversById] = useState<Record<string, DriverMini>>(
+    {},
+  );
+  const [stopsById, setStopsById] = useState<Record<string, TourStopMini>>({});
+
   const load = async () => {
     try {
       setErrorMsg("");
@@ -76,7 +95,7 @@ export default function Bookings() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user?.id]);
 
-  // ✅ Auto-refresh when booking status changes (Realtime)
+  // Realtime refresh
   useEffect(() => {
     if (authLoading || !user) return;
 
@@ -90,10 +109,7 @@ export default function Bookings() {
           table: "bookings",
           filter: `user_id=eq.${user.id}`,
         },
-        () => {
-          // Any insert/update/delete for this user's bookings → refresh list
-          load();
-        },
+        () => load(),
       )
       .subscribe();
 
@@ -103,15 +119,79 @@ export default function Bookings() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user?.id]);
 
-  // ✅ Polling fallback (in case realtime is off / blocked)
+  // Polling fallback
   useEffect(() => {
     if (authLoading || !user) return;
-    const t = window.setInterval(() => {
-      load();
-    }, 15000); // 15s
+    const t = window.setInterval(load, 15000);
     return () => window.clearInterval(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user?.id]);
+
+  // Batch fetch drivers for confirmed bookings
+  useEffect(() => {
+    const run = async () => {
+      const ids = Array.from(
+        new Set(
+          bookings
+            .filter((b) => b.status === "confirmed")
+            .map((b) => b.driverId ?? null)
+            .filter(Boolean) as string[],
+        ),
+      );
+
+      if (!ids.length) {
+        setDriversById({});
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("drivers")
+        .select("id, full_name, vehicle_type, years_experience")
+        .in("id", ids);
+
+      if (error || !data) return;
+
+      const map: Record<string, DriverMini> = {};
+      for (const d of data as any[]) map[d.id] = d as DriverMini;
+      setDriversById(map);
+    };
+
+    run();
+  }, [bookings]);
+
+  // Batch fetch selected add-on stops
+  useEffect(() => {
+    const run = async () => {
+      const ids = Array.from(
+        new Set(
+          bookings
+            .flatMap((b) => [
+              b.placesToEatStopId ?? null,
+              b.pasalubongStopId ?? null,
+            ])
+            .filter(Boolean) as string[],
+        ),
+      );
+
+      if (!ids.length) {
+        setStopsById({});
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("tour_stops")
+        .select("id, name, type")
+        .in("id", ids);
+
+      if (error || !data) return;
+
+      const map: Record<string, TourStopMini> = {};
+      for (const s of data as any[]) map[s.id] = s as TourStopMini;
+      setStopsById(map);
+    };
+
+    run();
+  }, [bookings]);
 
   const counts = useMemo(() => {
     const base = {
@@ -199,7 +279,6 @@ export default function Bookings() {
           </div>
         </div>
 
-        {/* ✅ Filters */}
         <div className="mb-8 flex flex-wrap gap-2">
           {filterBtn("all", "All", counts.all)}
           {filterBtn("pending", "Pending", counts.pending)}
@@ -238,17 +317,29 @@ export default function Bookings() {
         ) : (
           <div className="grid gap-4">
             {filtered.map((b) => {
-              const addOns =
-                [
-                  b.placesToEatStopId ? "Places to Eat" : null,
-                  b.pasalubongStopId ? "Pasalubong Center" : null,
-                ]
-                  .filter(Boolean)
-                  .join(", ") || null;
-
               const canCancel =
                 b.status === "pending" || b.status === "confirmed";
               const isBusy = busyId === b.id;
+
+              const driver =
+                b.status === "confirmed" && b.driverId
+                  ? (driversById[b.driverId] ?? null)
+                  : null;
+
+              const restaurant = b.placesToEatStopId
+                ? (stopsById[b.placesToEatStopId] ?? null)
+                : null;
+
+              const pasalubong = b.pasalubongStopId
+                ? (stopsById[b.pasalubongStopId] ?? null)
+                : null;
+
+              const addOnsText = [
+                restaurant ? `Places to Eat: ${restaurant.name}` : null,
+                pasalubong ? `Pasalubong Center: ${pasalubong.name}` : null,
+              ]
+                .filter(Boolean)
+                .join(" • ");
 
               return (
                 <div key={b.id} className="rounded-2xl bg-white border p-6">
@@ -285,23 +376,25 @@ export default function Bookings() {
                         Transportation:{" "}
                         <span className="font-medium text-gray-900">
                           {transportLabel(b.transport)}
-                        </span>{" "}
+                        </span>
                         {b.transport ? (
                           <span className="text-gray-500">
-                            (Driver:{" "}
-                            {b.driver && b.driver !== "to_be_assigned"
-                              ? b.driver
-                              : "To be assigned"}
-                            )
+                            {" "}
+                            •{" "}
+                            {b.status !== "confirmed"
+                              ? "Driver: To be assigned"
+                              : driver
+                                ? `Driver: ${driver.full_name}`
+                                : "Driver: Not assigned"}
                           </span>
                         ) : null}
                       </p>
 
-                      {addOns ? (
+                      {addOnsText ? (
                         <p className="text-sm text-gray-600">
                           Add-ons:{" "}
                           <span className="font-medium text-gray-900">
-                            {addOns}
+                            {addOnsText}
                           </span>
                         </p>
                       ) : null}
@@ -315,7 +408,6 @@ export default function Bookings() {
                         View
                       </Button>
 
-                      {/* ✅ Cancel booking (users) */}
                       <Button
                         variant="outline"
                         disabled={!canCancel || isBusy}

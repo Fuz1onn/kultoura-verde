@@ -10,10 +10,14 @@ export type AdminBooking = Booking & {
   confirmedAt?: string;
   rejectedAt?: string;
   completedAt?: string;
+
+  // ✅ new (optional, for joining later)
+  driverId?: string | null;
 };
 
 function rowToAdminBooking(row: BookingRow): AdminBooking {
   const base = rowToBooking(row);
+
   return {
     ...base,
     userId: row.user_id,
@@ -21,6 +25,9 @@ function rowToAdminBooking(row: BookingRow): AdminBooking {
     confirmedAt: row.confirmed_at ?? undefined,
     rejectedAt: row.rejected_at ?? undefined,
     completedAt: row.completed_at ?? undefined,
+
+    // ✅ assumes bookings table has driver_id uuid
+    driverId: (row as any).driver_id ?? null,
   };
 }
 
@@ -36,17 +43,21 @@ export async function adminListBookings(): Promise<AdminBooking[]> {
 
 export async function adminConfirmBooking(params: {
   id: string;
-  driverName?: string; // optional for now
+  driverId?: string; // ✅ new: selected driver uuid (optional for now)
   adminNotes?: string;
 }): Promise<void> {
-  const driver =
-    params.driverName?.trim() ? params.driverName.trim() : "to_be_assigned";
-
   const { error } = await supabase
     .from("bookings")
     .update({
       status: "confirmed" satisfies BookingStatus,
-      driver,
+
+      // ✅ new column on bookings
+      driver_id: params.driverId ?? null,
+
+      // ✅ keep your existing driver text field consistent (optional but recommended)
+      // If you still have a "driver" text column used elsewhere, keep this:
+      driver: params.driverId ? "assigned" : "to_be_assigned",
+
       admin_notes: params.adminNotes?.trim() ? params.adminNotes.trim() : null,
       confirmed_at: new Date().toISOString(),
       rejected_at: null,
@@ -72,6 +83,10 @@ export async function adminRejectBooking(params: {
       admin_notes: params.adminNotes?.trim() ? params.adminNotes.trim() : null,
       rejected_at: new Date().toISOString(),
       confirmed_at: null,
+
+      // ✅ clear driver assignment on reject
+      driver_id: null,
+      driver: "to_be_assigned",
     })
     .eq("id", params.id);
 
