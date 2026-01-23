@@ -15,6 +15,11 @@ type TourStop = {
   category: "places_to_eat" | "pasalubong_center";
 };
 
+type LocationState = {
+  returnTo?: string;
+  pickTourStop?: { id: string; category: TourStop["category"] };
+};
+
 export default function TourStopProfile() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -24,9 +29,14 @@ export default function TourStopProfile() {
   const [loading, setLoading] = useState(true);
 
   const returnTo =
-    ((location.state as any)?.returnTo as string | undefined) ??
+    (location.state as LocationState | null)?.returnTo ??
     sessionStorage.getItem("kv_bookingReturnTo") ??
     undefined;
+
+  // ✅ If user came from BookingRequested, hide "Add to Booking" CTAs (redundant)
+  const fromBookingRequested = useMemo(() => {
+    return !!returnTo && returnTo.includes("/booking/requested/");
+  }, [returnTo]);
 
   useEffect(() => {
     if (!id) return;
@@ -126,7 +136,7 @@ export default function TourStopProfile() {
             onClick={goBack}
             className="text-sm text-gray-600 hover:text-green-700"
           >
-            ← Back to Booking
+            ← {fromBookingRequested ? "Back to Booking" : "Back"}
           </button>
 
           <span className="text-xs rounded-full bg-gray-100 text-gray-700 px-3 py-1">
@@ -195,19 +205,21 @@ export default function TourStopProfile() {
                   </div>
                 </div>
 
-                {/* CTA */}
-                <div className="mt-8 flex flex-col sm:flex-row gap-3">
-                  <Button
-                    onClick={addToBooking}
-                    className="bg-green-600 text-white hover:bg-green-700"
-                  >
-                    Add to Booking
-                  </Button>
+                {/* ✅ CTA only when NOT from BookingRequested */}
+                {!fromBookingRequested ? (
+                  <div className="mt-8 flex flex-col sm:flex-row gap-3">
+                    <Button
+                      onClick={addToBooking}
+                      className="bg-green-600 text-white hover:bg-green-700"
+                    >
+                      Add to Booking
+                    </Button>
 
-                  <Button variant="outline" onClick={browseServices}>
-                    Browse Services
-                  </Button>
-                </div>
+                    <Button variant="outline" onClick={browseServices}>
+                      Browse Services
+                    </Button>
+                  </div>
+                ) : null}
               </div>
             </div>
           ) : (
@@ -219,17 +231,20 @@ export default function TourStopProfile() {
                 {item.description || "No description available yet."}
               </p>
 
-              <div className="mt-8 flex flex-col sm:flex-row gap-3">
-                <Button
-                  onClick={addToBooking}
-                  className="bg-green-600 text-white hover:bg-green-700"
-                >
-                  Add to Booking
-                </Button>
-                <Button variant="outline" onClick={browseServices}>
-                  Browse Services
-                </Button>
-              </div>
+              {/* ✅ CTA only when NOT from BookingRequested */}
+              {!fromBookingRequested ? (
+                <div className="mt-8 flex flex-col sm:flex-row gap-3">
+                  <Button
+                    onClick={addToBooking}
+                    className="bg-green-600 text-white hover:bg-green-700"
+                  >
+                    Add to Booking
+                  </Button>
+                  <Button variant="outline" onClick={browseServices}>
+                    Browse Services
+                  </Button>
+                </div>
+              ) : null}
             </div>
           )}
 
@@ -251,20 +266,22 @@ export default function TourStopProfile() {
           ) : null}
         </div>
 
-        {/* Mobile sticky CTA */}
-        <div className="sm:hidden fixed bottom-4 left-0 right-0 px-4">
-          <div className="mx-auto max-w-5xl rounded-2xl border bg-white shadow-lg p-3 flex gap-3">
-            <Button
-              onClick={addToBooking}
-              className="flex-1 bg-green-600 text-white hover:bg-green-700"
-            >
-              Add to Booking
-            </Button>
-            <Button variant="outline" onClick={goBack}>
-              Back
-            </Button>
+        {/* ✅ Mobile sticky CTA only when NOT from booking requested */}
+        {!fromBookingRequested ? (
+          <div className="sm:hidden fixed bottom-4 left-0 right-0 px-4">
+            <div className="mx-auto max-w-5xl rounded-2xl border bg-white shadow-lg p-3 flex gap-3">
+              <Button
+                onClick={addToBooking}
+                className="flex-1 bg-green-600 text-white hover:bg-green-700"
+              >
+                Add to Booking
+              </Button>
+              <Button variant="outline" onClick={goBack}>
+                Back
+              </Button>
+            </div>
           </div>
-        </div>
+        ) : null}
       </div>
     </section>
   );

@@ -74,6 +74,41 @@ function pill(text: string) {
   );
 }
 
+function renderWithBoldPrices(text: string) {
+  // ₱1,000 | P1,000 | ₱800–₱2,000 | P800 - P2,000 (dash can be – or -)
+  const re =
+    /(₱|P)\s?\d{1,3}(?:,\d{3})*(?:\s?[–-]\s?(?:₱|P)?\s?\d{1,3}(?:,\d{3})*)?/g;
+
+  const nodes: React.ReactNode[] = [];
+  let lastIndex = 0;
+
+  for (const match of text.matchAll(re)) {
+    const m = match[0];
+    const index = match.index ?? 0;
+
+    // text before the price
+    if (index > lastIndex) {
+      nodes.push(text.slice(lastIndex, index));
+    }
+
+    // the price itself (bold)
+    nodes.push(
+      <span key={`${index}-${m}`} className="font-semibold text-gray-900">
+        {m}
+      </span>,
+    );
+
+    lastIndex = index + m.length;
+  }
+
+  // remaining text after last match
+  if (lastIndex < text.length) {
+    nodes.push(text.slice(lastIndex));
+  }
+
+  return nodes;
+}
+
 export default function InstructorProfile() {
   const navigate = useNavigate();
   const { instructorId } = useParams();
@@ -435,7 +470,9 @@ export default function InstructorProfile() {
                   <div className="rounded-2xl bg-white border p-6">
                     {sectionTitle("Pricing notes")}
                     <div className="mt-3 text-sm text-gray-700 space-y-3">
-                      {inst.rate_notes ? <p>{inst.rate_notes}</p> : null}
+                      {inst.rate_notes ? (
+                        <p>{renderWithBoldPrices(inst.rate_notes)}</p>
+                      ) : null}
 
                       {inst.materials_fee_min != null ||
                       inst.materials_fee_max != null ? (

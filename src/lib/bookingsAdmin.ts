@@ -1,6 +1,6 @@
 // src/lib/bookingsAdmin.ts
 import { supabase } from "@/lib/supabaseClient";
-import type { BookingStatus } from "@/types/booking";
+import type { BookingStatus, TransportOption } from "@/types/booking";
 import { rowToBooking, type BookingRow } from "@/lib/bookingMappers";
 import type { Booking } from "@/types/booking";
 
@@ -10,8 +10,6 @@ export type AdminBooking = Booking & {
   confirmedAt?: string;
   rejectedAt?: string;
   completedAt?: string;
-
-  // ✅ new (optional, for joining later)
   driverId?: string | null;
 };
 
@@ -25,9 +23,7 @@ function rowToAdminBooking(row: BookingRow): AdminBooking {
     confirmedAt: row.confirmed_at ?? undefined,
     rejectedAt: row.rejected_at ?? undefined,
     completedAt: row.completed_at ?? undefined,
-
-    // ✅ assumes bookings table has driver_id uuid
-    driverId: (row as any).driver_id ?? null,
+    driverId: row.driver_id ?? null,
   };
 }
 
@@ -41,26 +37,91 @@ export async function adminListBookings(): Promise<AdminBooking[]> {
   return (data ?? []).map((r) => rowToAdminBooking(r as BookingRow));
 }
 
+function num(v: unknown): number {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function pickFinalWorkshopRate(i: {
+  rate: number | null;
+  rate_min: number | null;
+}): number {
+  return num(i.rate ?? i.rate_min ?? 0);
+}
+
+function pickFinalMaterialsFee(i: {
+  materials_fee_min: number | null;
+}): number {
+  return num(i.materials_fee_min ?? 0);
+}
+
 export async function adminConfirmBooking(params: {
   id: string;
-  driverId?: string; // ✅ new: selected driver uuid (optional for now)
+  driverId?: string; // selected driver uuid (optional)
   adminNotes?: string;
 }): Promise<void> {
+  // 1) Fetch booking to get instructor_id (required for pricing lock)
+  const { data: bookingRow, error: bErr } = await supabase
+    .from("bookings")
+    .select("id, instructor_id")
+    .eq("id", params.id)
+    .single();
+
+  if (bErr) throw bErr;
+  if (!bookingRow) throw new Error("Booking not found.");
+  if (!bookingRow.instructor_id)
+    throw new Error("Booking has no instructor_id.");
+
+  // 2) Fetch instructor pricing
+  const { data: instructor, error: iErr } = await supabase
+    .from("instructors")
+    .select("rate, rate_min, materials_fee_min")
+    .eq("id", bookingRow.instructor_id)
+    .single();
+
+  if (iErr) throw iErr;
+  if (!instructor) throw new Error("Instructor not found.");
+
+  const finalWorkshopRate = pickFinalWorkshopRate(instructor);
+  const finalMaterialsFee = pickFinalMaterialsFee(instructor);
+
+  // 3) If driver selected, fetch driver rate
+  let finalTransportRate = 0;
+
+  if (params.driverId) {
+    const { data: driver, error: dErr } = await supabase
+      .from("drivers")
+      .select("rate, vehicle_type")
+      .eq("id", params.driverId)
+      .single();
+
+    if (dErr) throw dErr;
+    if (!driver) throw new Error("Driver not found.");
+
+    finalTransportRate = num(driver.rate);
+  }
+
+  const finalTotal = finalWorkshopRate + finalMaterialsFee + finalTransportRate;
+
+  // 4) Confirm + lock pricing + assign driver_id
   const { error } = await supabase
     .from("bookings")
     .update({
       status: "confirmed" satisfies BookingStatus,
 
-      // ✅ new column on bookings
       driver_id: params.driverId ?? null,
-
-      // ✅ keep your existing driver text field consistent (optional but recommended)
-      // If you still have a "driver" text column used elsewhere, keep this:
       driver: params.driverId ? "assigned" : "to_be_assigned",
 
       admin_notes: params.adminNotes?.trim() ? params.adminNotes.trim() : null,
       confirmed_at: new Date().toISOString(),
       rejected_at: null,
+
+      // ✅ lock pricing here
+      final_workshop_rate: finalWorkshopRate,
+      final_materials_fee: finalMaterialsFee,
+      final_transport_rate: finalTransportRate,
+      final_total: finalTotal,
+      pricing_locked_at: new Date().toISOString(),
     })
     .eq("id", params.id);
 
@@ -84,7 +145,7 @@ export async function adminRejectBooking(params: {
       rejected_at: new Date().toISOString(),
       confirmed_at: null,
 
-      // ✅ clear driver assignment on reject
+      // clear driver assignment on reject
       driver_id: null,
       driver: "to_be_assigned",
     })

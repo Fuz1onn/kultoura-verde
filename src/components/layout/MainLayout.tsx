@@ -3,6 +3,7 @@ import Header from "./Header";
 import Footer from "./Footer";
 import BackToTop from "../ui/BackToTop";
 import { Toaster } from "sonner";
+import CookieNotice from "../CookieNotice";
 
 export default function MainLayout() {
   return (
@@ -21,6 +22,7 @@ export default function MainLayout() {
         </main>
         <Footer />
         <BackToTop />
+        <CookieNotice />
       </div>
     </div>
   );

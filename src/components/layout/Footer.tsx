@@ -1,3 +1,6 @@
+// src/components/Footer.tsx
+import { Link } from "react-router-dom";
+
 const Footer = () => {
   return (
     <footer className="bg-gray-900 text-gray-300 py-16">
@@ -11,11 +14,20 @@ const Footer = () => {
           </p>
         </div>
 
-        {/* Links */}
+        {/* Explore */}
         <div>
           <h4 className="text-white font-medium">Explore</h4>
           <ul className="mt-4 space-y-2 text-sm">
-            <li>Services</li>
+            <li>
+              <Link to="/services" className="hover:text-green-500 transition">
+                Services
+              </Link>
+            </li>
+            <li>
+              <Link to="/bookings" className="hover:text-green-500 transition">
+                My Bookings
+              </Link>
+            </li>
           </ul>
         </div>
 
@@ -23,8 +35,19 @@ const Footer = () => {
         <div>
           <h4 className="text-white font-medium">Legal</h4>
           <ul className="mt-4 space-y-2 text-sm">
-            <li>Terms & Conditions</li>
-            <li>Privacy Policy</li>
+            <li>
+              <Link to="/terms" className="hover:text-green-500 transition">
+                Terms & Conditions
+              </Link>
+            </li>
+            <li>
+              <Link
+                to="/privacy-policy"
+                className="hover:text-green-500 transition"
+              >
+                Privacy Policy
+              </Link>
+            </li>
           </ul>
         </div>
       </div>

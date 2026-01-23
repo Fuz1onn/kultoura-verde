@@ -385,7 +385,7 @@ export default function Booking() {
             <div className="mb-10">
               <div className="mb-4">
                 <h3 className="text-base font-medium text-gray-900">
-                  🍽️ Places to Eat (Optional)
+                  Places to Eat (Optional)
                 </h3>
                 <p className="text-sm text-gray-600 mt-1">
                   Select one restaurant to include during your tour.
@@ -412,7 +412,7 @@ export default function Booking() {
                     >
                       <div className="flex items-start justify-between gap-4">
                         <div className="min-w-0">
-                          <p className="font-medium text-gray-900 break-words leading-snug sm:truncate">
+                          <p className="font-medium text-gray-900 wrap-break-word leading-snug sm:truncate">
                             {r.name}
                           </p>
 
@@ -468,7 +468,7 @@ export default function Booking() {
             <div>
               <div className="mb-4">
                 <h3 className="text-base font-medium text-gray-900">
-                  🛍️ Pasalubong Center (Optional)
+                  Pasalubong Center (Optional)
                 </h3>
                 <p className="text-sm text-gray-600 mt-1">
                   Choose one stop for local delicacies and souvenirs.
@@ -495,7 +495,7 @@ export default function Booking() {
                     >
                       <div className="flex items-start justify-between gap-4">
                         <div className="min-w-0">
-                          <p className="font-medium text-gray-900 break-words leading-snug sm:truncate">
+                          <p className="font-medium text-gray-900 wrap-break-word leading-snug sm:truncate">
                             {p.name}
                           </p>
 

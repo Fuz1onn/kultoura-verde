@@ -1,28 +1,66 @@
-import { useMemo, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+// src/pages/auth.tsx
+import { useMemo, useState, useEffect } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabaseClient";
 
 type LocationState = { from?: string };
+
+function errorMessage(err: unknown) {
+  if (err instanceof Error) return err.message;
+  if (typeof err === "object" && err && "message" in err) {
+    const msg = (err as { message?: unknown }).message;
+    if (typeof msg === "string") return msg;
+  }
+  return "Authentication failed.";
+}
+
+function getModeFromSearch(search: string): "login" | "signup" {
+  const sp = new URLSearchParams(search);
+  const m = sp.get("mode");
+  return m === "signup" ? "signup" : "login";
+}
 
 export default function Auth() {
   const navigate = useNavigate();
   const location = useLocation();
   const from = (location.state as LocationState | null)?.from || "/";
 
-  const [mode, setMode] = useState<"login" | "signup">("login");
+  const [mode, setMode] = useState<"login" | "signup">(() =>
+    getModeFromSearch(location.search),
+  );
+
+  // ✅ New: success/info message (for signup verification)
+  const [infoMsg, setInfoMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    setMode(getModeFromSearch(location.search));
+  }, [location.search]);
+
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
+  const [agree, setAgree] = useState(false);
+
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const setModeInUrl = (next: "login" | "signup") => {
+    const sp = new URLSearchParams(location.search);
+    sp.set("mode", next);
+    navigate(`${location.pathname}?${sp.toString()}`, { replace: true });
+    setError(null);
+    setInfoMsg(null);
+    if (next === "login") setAgree(false);
+  };
 
   const canSubmit = useMemo(() => {
     if (!email.trim() || !password.trim()) return false;
     if (mode === "signup" && !name.trim()) return false;
+    if (mode === "signup" && !agree) return false;
     return true;
-  }, [mode, name, email, password]);
+  }, [mode, name, email, password, agree]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -30,6 +68,7 @@ export default function Auth() {
 
     setSubmitting(true);
     setError(null);
+    setInfoMsg(null);
 
     try {
       if (mode === "login") {
@@ -39,28 +78,57 @@ export default function Auth() {
         });
         if (error) throw error;
         navigate(from, { replace: true });
-      } else {
-        const { error } = await supabase.auth.signUp({
-          email: email.trim(),
-          password,
-          options: {
-            data: { full_name: name.trim() },
-            emailRedirectTo: `${window.location.origin}/auth/callback`,
-          },
-        });
-        if (error) throw error;
-
-        // If email confirmations are ON, user must confirm before session exists
-        // We'll just send them home (or keep them here with a message).
-        navigate(from, { replace: true });
+        return;
       }
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (err: any) {
-      setError(err?.message ?? "Authentication failed.");
+
+      // signup
+      if (!agree) {
+        setError("Please agree to the Terms & Privacy Policy to continue.");
+        return;
+      }
+
+      const cleanEmail = email.trim();
+
+      const { data, error } = await supabase.auth.signUp({
+        email: cleanEmail,
+        password,
+        options: {
+          data: { full_name: name.trim() },
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+
+      if (error) throw error;
+
+      // ✅ If email confirmation is ON, session may be null.
+      // Best UX: switch to login mode and show a "check your email" message.
+      setModeInUrl("login");
+
+      // keep their email filled for convenience
+      setEmail(cleanEmail);
+      setPassword(""); // optional: clear for security
+
+      const needsEmailVerify = !data.session; // common case when confirmations enabled
+
+      setInfoMsg(
+        needsEmailVerify
+          ? `We sent a verification link to ${cleanEmail}. Please verify your email, then log in.`
+          : "Account created. You can now log in.",
+      );
+    } catch (err: unknown) {
+      setError(errorMessage(err));
     } finally {
       setSubmitting(false);
     }
   }
+
+  // ✅ Preserve auth mode when opening legal pages
+  const termsHref = `/terms?from=${encodeURIComponent(
+    location.pathname + location.search,
+  )}`;
+  const privacyHref = `/privacy-policy?from=${encodeURIComponent(
+    location.pathname + location.search,
+  )}`;
 
   return (
     <section className="min-h-screen bg-gray-50 text-gray-900 pt-32 pb-24">
@@ -86,7 +154,7 @@ export default function Auth() {
             <div className="mt-6 grid grid-cols-2 rounded-xl border bg-gray-50 p-1">
               <button
                 type="button"
-                onClick={() => setMode("login")}
+                onClick={() => setModeInUrl("login")}
                 className={`rounded-lg py-2 text-sm font-medium transition ${
                   mode === "login"
                     ? "bg-white shadow-sm text-gray-900"
@@ -97,7 +165,7 @@ export default function Auth() {
               </button>
               <button
                 type="button"
-                onClick={() => setMode("signup")}
+                onClick={() => setModeInUrl("signup")}
                 className={`rounded-lg py-2 text-sm font-medium transition ${
                   mode === "signup"
                     ? "bg-white shadow-sm text-gray-900"
@@ -107,6 +175,13 @@ export default function Auth() {
                 Sign Up
               </button>
             </div>
+
+            {/* ✅ Info message (after signup) */}
+            {infoMsg ? (
+              <div className="mt-5 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+                {infoMsg}
+              </div>
+            ) : null}
 
             {error ? (
               <div className="mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -155,6 +230,34 @@ export default function Auth() {
                 />
               </div>
 
+              {mode === "signup" ? (
+                <label className="flex items-start gap-3 text-sm text-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={agree}
+                    onChange={(e) => setAgree(e.target.checked)}
+                    className="mt-1 h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
+                  />
+                  <span>
+                    I agree to the{" "}
+                    <Link
+                      to={termsHref}
+                      className="text-green-700 hover:underline font-medium"
+                    >
+                      Terms & Conditions
+                    </Link>{" "}
+                    and{" "}
+                    <Link
+                      to={privacyHref}
+                      className="text-green-700 hover:underline font-medium"
+                    >
+                      Privacy Policy
+                    </Link>
+                    .
+                  </span>
+                </label>
+              ) : null}
+
               <Button
                 type="submit"
                 disabled={!canSubmit || submitting}
@@ -167,11 +270,19 @@ export default function Auth() {
                     : "Create Account"}
               </Button>
             </form>
-          </div>
 
-          <p className="mt-4 text-xs text-gray-500 text-center">
-            By continuing, you agree to our Terms & Privacy Policy.
-          </p>
+            <p className="mt-5 text-xs text-gray-500 text-center">
+              By continuing, you agree to our{" "}
+              <Link to={termsHref} className="text-green-700 hover:underline">
+                Terms
+              </Link>{" "}
+              and{" "}
+              <Link to={privacyHref} className="text-green-700 hover:underline">
+                Privacy Policy
+              </Link>
+              .
+            </p>
+          </div>
         </div>
       </div>
     </section>

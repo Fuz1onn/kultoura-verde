@@ -126,3 +126,141 @@ export async function cancelMyBooking(bookingId: string): Promise<void> {
 export function supabaseErrorToString(err: unknown) {
   return errorMessage(err);
 }
+
+// -------------------------------
+// Admin: lock pricing on confirm / driver assignment
+// -------------------------------
+function num(v: unknown): number {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+}
+
+// Choose a single "final" value from instructor pricing columns
+function pickFinalWorkshopRate(i: {
+  rate: number | null;
+  rate_min: number | null;
+  rate_max: number | null;
+}): number {
+  // Prefer exact rate, else min, else 0
+  return num(i.rate ?? i.rate_min ?? 0);
+}
+
+function pickFinalMaterialsFee(i: {
+  materials_fee_min: number | null;
+  materials_fee_max: number | null;
+}): number {
+  // Prefer min as default; change to max if you want higher estimate
+  return num(i.materials_fee_min ?? 0);
+}
+
+/**
+ * Admin confirms booking AND locks instructor pricing
+ * (and transport too if driver already assigned).
+ */
+export async function adminConfirmBookingLockPricing(
+  bookingId: string,
+): Promise<void> {
+  // 1) Get booking FKs
+  const { data: bookingRow, error: bErr } = await supabase
+    .from("bookings")
+    .select("id, instructor_id, driver_id")
+    .eq("id", bookingId)
+    .single();
+
+  if (bErr) throw bErr;
+  if (!bookingRow) throw new Error("Booking not found.");
+  if (!bookingRow.instructor_id)
+    throw new Error("Booking has no instructor_id.");
+
+  // 2) Instructor pricing
+  const { data: instructor, error: iErr } = await supabase
+    .from("instructors")
+    .select("rate, rate_min, rate_max, materials_fee_min, materials_fee_max")
+    .eq("id", bookingRow.instructor_id)
+    .single();
+
+  if (iErr) throw iErr;
+  if (!instructor) throw new Error("Instructor not found.");
+
+  const finalWorkshopRate = pickFinalWorkshopRate(instructor);
+  const finalMaterialsFee = pickFinalMaterialsFee(instructor);
+
+  // 3) Transport (if already assigned)
+  let finalTransportRate = 0;
+
+  if (bookingRow.driver_id) {
+    const { data: driver, error: dErr } = await supabase
+      .from("drivers")
+      .select("rate")
+      .eq("id", bookingRow.driver_id)
+      .single();
+
+    // don't block confirmation if driver missing
+    if (!dErr && driver) finalTransportRate = num(driver.rate);
+  }
+
+  const finalTotal = finalWorkshopRate + finalMaterialsFee + finalTransportRate;
+
+  // 4) Confirm + lock
+  const { error: updErr } = await supabase
+    .from("bookings")
+    .update({
+      status: "confirmed",
+      final_workshop_rate: finalWorkshopRate,
+      final_materials_fee: finalMaterialsFee,
+      final_transport_rate: finalTransportRate,
+      final_total: finalTotal,
+      pricing_locked_at: new Date().toISOString(),
+    })
+    .eq("id", bookingId);
+
+  if (updErr) throw updErr;
+}
+
+/**
+ * Admin assigns driver and locks transport pricing.
+ * Also recomputes final_total using already-locked workshop/materials.
+ */
+export async function adminAssignDriverLockTransport(
+  bookingId: string,
+  driverId: string,
+): Promise<void> {
+  // 1) Driver rate
+  const { data: driver, error: dErr } = await supabase
+    .from("drivers")
+    .select("rate")
+    .eq("id", driverId)
+    .single();
+
+  if (dErr) throw dErr;
+  if (!driver) throw new Error("Driver not found.");
+
+  const finalTransportRate = num(driver.rate);
+
+  // 2) Existing locked workshop/materials
+  const { data: bookingRow, error: bErr } = await supabase
+    .from("bookings")
+    .select("final_workshop_rate, final_materials_fee")
+    .eq("id", bookingId)
+    .single();
+
+  if (bErr) throw bErr;
+  if (!bookingRow) throw new Error("Booking not found.");
+
+  const workshop = num(bookingRow.final_workshop_rate);
+  const materials = num(bookingRow.final_materials_fee);
+  const finalTotal = workshop + materials + finalTransportRate;
+
+  // 3) Update booking
+  const { error: updErr } = await supabase
+    .from("bookings")
+    .update({
+      driver_id: driverId,
+      final_transport_rate: finalTransportRate,
+      final_total: finalTotal,
+      pricing_locked_at: new Date().toISOString(),
+    })
+    .eq("id", bookingId);
+
+  if (updErr) throw updErr;
+}

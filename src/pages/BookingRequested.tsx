@@ -20,6 +20,18 @@ type DriverProfile = {
   image_url: string | null;
 };
 
+type InstructorProfile = {
+  id: string;
+  name: string;
+  nickname: string | null;
+  rate: number | null;
+  rate_min: number | null;
+  rate_max: number | null;
+  materials_fee_min: number | null;
+  materials_fee_max: number | null;
+  rate_notes: string | null;
+};
+
 type TourStopMini = {
   id: string;
   name: string;
@@ -99,6 +111,14 @@ function getDriverIdFromBooking(b: Booking | null): string | null {
   return (anyB.driverId ?? anyB.driver_id ?? null) as string | null;
 }
 
+function getInstructorIdFromBooking(b: Booking | null): string | null {
+  if (!b) return null;
+  const anyB = b as any;
+  return (anyB.instructorId ?? anyB.instructor_id ?? null) as string | null;
+}
+
+const n = (v: unknown) => (v == null ? 0 : Number(v));
+
 export default function BookingRequested() {
   const navigate = useNavigate();
   const { bookingId } = useParams();
@@ -122,8 +142,18 @@ export default function BookingRequested() {
   );
   const [driverLoading, setDriverLoading] = useState(false);
 
+  const [instructorProfile, setInstructorProfile] =
+    useState<InstructorProfile | null>(null);
+  const [instructorLoading, setInstructorLoading] = useState(false);
+
   const [stopsById, setStopsById] = useState<Record<string, TourStopMini>>({});
   const [stopsLoading, setStopsLoading] = useState(false);
+
+  const driverId = useMemo(() => getDriverIdFromBooking(booking), [booking]);
+  const instructorId = useMemo(
+    () => getInstructorIdFromBooking(booking),
+    [booking],
+  );
 
   // -------------------------------
   // Load booking (+ polling)
@@ -199,7 +229,6 @@ export default function BookingRequested() {
     let alive = true;
 
     const run = async () => {
-      const driverId = getDriverIdFromBooking(booking);
       const shouldShow = booking?.status === "confirmed" && !!driverId;
 
       if (!shouldShow) {
@@ -237,7 +266,51 @@ export default function BookingRequested() {
     return () => {
       alive = false;
     };
-  }, [booking?.status, getDriverIdFromBooking(booking)]);
+  }, [booking?.status, driverId]);
+
+  // -------------------------------
+  // Load instructor profile (for pricing)
+  // -------------------------------
+  useEffect(() => {
+    let alive = true;
+
+    const run = async () => {
+      if (!instructorId) {
+        setInstructorProfile(null);
+        setInstructorLoading(false);
+        return;
+      }
+
+      try {
+        setInstructorLoading(true);
+
+        const { data, error } = await supabase
+          .from("instructors")
+          .select(
+            "id, name, nickname, rate, rate_min, rate_max, materials_fee_min, materials_fee_max, rate_notes",
+          )
+          .eq("id", instructorId)
+          .single();
+
+        if (!alive) return;
+
+        if (error || !data) {
+          setInstructorProfile(null);
+          return;
+        }
+
+        setInstructorProfile(data as InstructorProfile);
+      } finally {
+        if (alive) setInstructorLoading(false);
+      }
+    };
+
+    run();
+
+    return () => {
+      alive = false;
+    };
+  }, [instructorId]);
 
   // -------------------------------
   // Load selected add-on stop names
@@ -380,7 +453,23 @@ export default function BookingRequested() {
   }
 
   const meta = statusMeta(booking.status);
-  const driverId = getDriverIdFromBooking(booking);
+
+  // Pricing derived
+  const workshopMin =
+    instructorProfile?.rate_min ?? instructorProfile?.rate ?? 0;
+  const workshopMax =
+    instructorProfile?.rate_max ?? instructorProfile?.rate ?? 0;
+
+  const materialsMin = instructorProfile?.materials_fee_min ?? 0;
+  const materialsMax = instructorProfile?.materials_fee_max ?? 0;
+
+  const transportRate = driverProfile?.rate ?? 0;
+
+  const totalMin = n(workshopMin) + n(materialsMin) + n(transportRate);
+  const totalMax = n(workshopMax) + n(materialsMax) + n(transportRate);
+
+  const showRange =
+    n(workshopMin) !== n(workshopMax) || n(materialsMin) !== n(materialsMax);
 
   return (
     <section className="min-h-screen bg-gray-50 text-gray-900 pt-32 pb-24">
@@ -402,7 +491,7 @@ export default function BookingRequested() {
         {/* Main Card */}
         <div className="rounded-3xl bg-white border shadow-sm overflow-hidden">
           {/* Header band */}
-          <div className="bg-gradient-to-r from-green-50 to-white border-b p-6 md:p-10">
+          <div className="bg-linear-to-r from-green-50 to-white border-b p-6 md:p-10">
             <div className="flex items-start justify-between gap-6">
               <div>
                 <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">
@@ -491,14 +580,12 @@ export default function BookingRequested() {
                               : (stopRestaurant?.name ?? "Not found")}
                           </p>
 
-                          {/* Address */}
                           {stopRestaurant?.address ? (
                             <p className="mt-1 text-sm text-gray-600">
                               {stopRestaurant.address}
                             </p>
                           ) : null}
 
-                          {/* Contact */}
                           {stopRestaurant?.mobile || stopRestaurant?.email ? (
                             <p className="mt-2 text-xs text-gray-500">
                               {stopRestaurant.mobile ? (
@@ -547,7 +634,6 @@ export default function BookingRequested() {
                     </div>
                   ) : null}
 
-                  {/* Divider if both exist */}
                   {booking.placesToEatStopId && booking.pasalubongStopId ? (
                     <div className="h-px bg-gray-100" />
                   ) : null}
@@ -566,14 +652,12 @@ export default function BookingRequested() {
                               : (stopPasalubong?.name ?? "Not found")}
                           </p>
 
-                          {/* Address */}
                           {stopPasalubong?.address ? (
                             <p className="mt-1 text-sm text-gray-600">
                               {stopPasalubong.address}
                             </p>
                           ) : null}
 
-                          {/* Contact */}
                           {stopPasalubong?.mobile || stopPasalubong?.email ? (
                             <p className="mt-2 text-xs text-gray-500">
                               {stopPasalubong.mobile ? (
@@ -679,7 +763,7 @@ export default function BookingRequested() {
                             <div>
                               <p className="text-xs text-gray-500">Rate</p>
                               <p className="mt-1 font-medium text-gray-900">
-                                ₱{Number(driverProfile.rate).toLocaleString()}{" "}
+                                ₱{n(driverProfile.rate).toLocaleString()}{" "}
                                 {rateUnitLabel(driverProfile.rate_unit)}
                               </p>
                               <p className="text-[11px] text-gray-500 mt-1">
@@ -688,10 +772,6 @@ export default function BookingRequested() {
                             </div>
                           </div>
                         </div>
-
-                        <p className="mt-6 text-[11px] text-gray-500">
-                          License No: {driverProfile.driver_license_no}
-                        </p>
                       </div>
                     </div>
                   </div>
@@ -700,6 +780,90 @@ export default function BookingRequested() {
                     Driver details not available yet.
                   </p>
                 )}
+              </div>
+            ) : null}
+
+            {/* Pricing Summary (Confirmed only) */}
+            {booking.status === "confirmed" ? (
+              <div className="mt-8 rounded-2xl border bg-white p-5">
+                <h3 className="text-sm font-semibold text-gray-900 mb-4">
+                  Pricing Summary
+                </h3>
+
+                {(() => {
+                  const workshop =
+                    booking.finalWorkshopRate ??
+                    instructorProfile?.rate ??
+                    instructorProfile?.rate_min ??
+                    0;
+
+                  const materials =
+                    booking.finalMaterialsFee ??
+                    instructorProfile?.materials_fee_min ??
+                    0;
+
+                  const transport =
+                    booking.finalTransportRate ?? driverProfile?.rate ?? 0;
+
+                  const total =
+                    booking.finalTotal ?? workshop + materials + transport;
+
+                  return (
+                    <div className="space-y-3 text-sm">
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-600">
+                          Workshop ({booking.serviceName}) •{" "}
+                          {booking.instructorName}
+                        </span>
+                        <span className="font-medium text-gray-900">
+                          ₱{Number(workshop).toLocaleString()}
+                        </span>
+                      </div>
+
+                      {materials > 0 ? (
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-600">Materials fee</span>
+                          <span className="font-medium text-gray-900">
+                            ₱{Number(materials).toLocaleString()}
+                          </span>
+                        </div>
+                      ) : null}
+
+                      {driverProfile ? (
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-600">
+                            Transportation ({driverProfile.vehicle_type})
+                          </span>
+                          <span className="font-medium text-gray-900">
+                            ₱{Number(transport).toLocaleString()}{" "}
+                            {rateUnitLabel(driverProfile.rate_unit)}
+                          </span>
+                        </div>
+                      ) : null}
+
+                      <div className="h-px bg-gray-200 my-2" />
+
+                      <div className="flex items-center justify-between text-base font-semibold">
+                        <span className="text-gray-900">Final Total</span>
+                        <span className="text-green-700">
+                          ₱{Number(total).toLocaleString()}
+                        </span>
+                      </div>
+
+                      <p className="mt-3 text-xs text-gray-500">
+                        Pricing is locked upon confirmation to prevent changes
+                        if rates are updated later.
+                      </p>
+
+                      {booking.pricingLockedAt ? (
+                        <p className="text-[11px] text-gray-500">
+                          Locked at:{" "}
+                          {new Date(booking.pricingLockedAt).toLocaleString()}
+                        </p>
+                      ) : null}
+                    </div>
+                  );
+                })()}
               </div>
             ) : null}
 

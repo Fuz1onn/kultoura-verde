@@ -34,4 +34,11 @@ export type Booking = {
   pasalubongStopId?: string | null;
 
   adminNotes?: string;
+
+  // Locked pricing (set by admin on confirm/assign)
+  finalWorkshopRate?: number | null;
+  finalMaterialsFee?: number | null;
+  finalTransportRate?: number | null;
+  finalTotal?: number | null;
+  pricingLockedAt?: string | null;
 };

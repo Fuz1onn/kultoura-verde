@@ -105,6 +105,7 @@ export default function AdminBookings() {
       const driverId = driverDraft[id] || undefined;
       const adminNotes = (notesDraft[id] ?? "").trim() || undefined;
 
+      // 1) Confirm booking (existing behavior: email notify, etc.)
       await adminConfirmBooking({
         id,
         driverId,
@@ -112,7 +113,7 @@ export default function AdminBookings() {
       });
 
       toast.success("Booking confirmed", {
-        description: "User has been notified by email.",
+        description: "Pricing locked and user notified by email.",
       });
 
       await load();

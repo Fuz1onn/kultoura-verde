@@ -17,6 +17,9 @@ import RequireAuth from "@/routes/RequireAuth";
 import RequireAdmin from "@/routes/RequireAdmin";
 import TourStopProfile from "@/pages/TourStopProfile";
 
+import PrivacyPolicy from "@/pages/PrivacyPolicy";
+import TermsAndConditions from "@/pages/TermsAndConditions";
+
 export default function App() {
   return (
     <Routes>
@@ -34,6 +37,8 @@ export default function App() {
         />
         <Route path="/auth" element={<Auth />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+        <Route path="/terms" element={<TermsAndConditions />} />
 
         {/* Protected */}
         <Route element={<RequireAuth />}>

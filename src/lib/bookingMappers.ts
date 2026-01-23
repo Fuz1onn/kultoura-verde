@@ -20,11 +20,17 @@ export type BookingRow = {
   pickup_notes: string | null;
 
   driver: string;
-
-  driver_id?: string | null;
+  driver_id: string | null;
 
   places_to_eat_stop_id: string | null;
   pasalubong_stop_id: string | null;
+
+  // ✅ NEW: locked pricing fields
+  final_workshop_rate: number | null;
+  final_materials_fee: number | null;
+  final_transport_rate: number | null;
+  final_total: number | null;
+  pricing_locked_at: string | null;
 
   admin_notes: string | null;
   confirmed_at: string | null;
@@ -54,11 +60,17 @@ export function rowToBooking(row: BookingRow): Booking {
     pickupNotes: row.pickup_notes ?? undefined,
 
     driver: row.driver,
-
-    driverId: (row as any).driver_id ?? null,
+    driverId: row.driver_id ?? null,
 
     placesToEatStopId: row.places_to_eat_stop_id ?? undefined,
     pasalubongStopId: row.pasalubong_stop_id ?? undefined,
+
+    // ✅ NEW: locked pricing fields
+    finalWorkshopRate: row.final_workshop_rate ?? null,
+    finalMaterialsFee: row.final_materials_fee ?? null,
+    finalTransportRate: row.final_transport_rate ?? null,
+    finalTotal: row.final_total ?? null,
+    pricingLockedAt: row.pricing_locked_at ?? null,
 
     adminNotes: row.admin_notes ?? undefined,
   };
@@ -108,9 +120,17 @@ export function bookingToInsertRow(
     pickup_notes: params.pickupNotes?.trim() ? params.pickupNotes.trim() : null,
 
     driver: params.driver ?? "to_be_assigned",
+    driver_id: null,
 
     places_to_eat_stop_id: params.placesToEatStopId ?? null,
     pasalubong_stop_id: params.pasalubongStopId ?? null,
+
+    // ✅ NEW: locked pricing defaults (null until admin confirms)
+    final_workshop_rate: null,
+    final_materials_fee: null,
+    final_transport_rate: null,
+    final_total: null,
+    pricing_locked_at: null,
 
     admin_notes: null,
     confirmed_at: null,
