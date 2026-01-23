@@ -1,6 +1,6 @@
 // src/lib/bookingsAdmin.ts
 import { supabase } from "@/lib/supabaseClient";
-import type { BookingStatus, TransportOption } from "@/types/booking";
+import type { BookingStatus } from "@/types/booking";
 import { rowToBooking, type BookingRow } from "@/lib/bookingMappers";
 import type { Booking } from "@/types/booking";
 

@@ -144,7 +144,6 @@ export default function BookingRequested() {
 
   const [instructorProfile, setInstructorProfile] =
     useState<InstructorProfile | null>(null);
-  const [instructorLoading, setInstructorLoading] = useState(false);
 
   const [stopsById, setStopsById] = useState<Record<string, TourStopMini>>({});
   const [stopsLoading, setStopsLoading] = useState(false);
@@ -277,13 +276,10 @@ export default function BookingRequested() {
     const run = async () => {
       if (!instructorId) {
         setInstructorProfile(null);
-        setInstructorLoading(false);
         return;
       }
 
       try {
-        setInstructorLoading(true);
-
         const { data, error } = await supabase
           .from("instructors")
           .select(
@@ -301,7 +297,7 @@ export default function BookingRequested() {
 
         setInstructorProfile(data as InstructorProfile);
       } finally {
-        if (alive) setInstructorLoading(false);
+        // no loading state needed
       }
     };
 
@@ -453,23 +449,6 @@ export default function BookingRequested() {
   }
 
   const meta = statusMeta(booking.status);
-
-  // Pricing derived
-  const workshopMin =
-    instructorProfile?.rate_min ?? instructorProfile?.rate ?? 0;
-  const workshopMax =
-    instructorProfile?.rate_max ?? instructorProfile?.rate ?? 0;
-
-  const materialsMin = instructorProfile?.materials_fee_min ?? 0;
-  const materialsMax = instructorProfile?.materials_fee_max ?? 0;
-
-  const transportRate = driverProfile?.rate ?? 0;
-
-  const totalMin = n(workshopMin) + n(materialsMin) + n(transportRate);
-  const totalMax = n(workshopMax) + n(materialsMax) + n(transportRate);
-
-  const showRange =
-    n(workshopMin) !== n(workshopMax) || n(materialsMin) !== n(materialsMax);
 
   return (
     <section className="min-h-screen bg-gray-50 text-gray-900 pt-32 pb-24">
