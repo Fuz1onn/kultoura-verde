@@ -30,9 +30,44 @@ type PickTourStopState = {
   };
 } | null;
 
+const DRAFT_KEY = "kv_bookingDraft_v1";
+
+type BookingDraft = {
+  dateISO?: string;
+  time?: string | null;
+  transport?: TransportOption | null;
+  pickupNotes?: string;
+  selectedRestaurant?: string | null;
+  selectedPasalubong?: string | null;
+};
+
+function safeParseDraft(raw: string | null): BookingDraft {
+  if (!raw) return {};
+  try {
+    return JSON.parse(raw) as BookingDraft;
+  } catch {
+    return {};
+  }
+}
+
+function toLocalISODate(d: Date) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function fromLocalISODate(iso: string): Date | undefined {
+  // "YYYY-MM-DD" -> Date in local time (avoid UTC shift)
+  const [y, m, d] = iso.split("-").map(Number);
+  if (!y || !m || !d) return undefined;
+  return new Date(y, m - 1, d);
+}
+
 export default function Booking() {
   const navigate = useNavigate();
   const { serviceId, instructorId } = useParams(); // serviceId = slug, instructorId = UUID
+  const location = useLocation();
 
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
@@ -40,7 +75,7 @@ export default function Booking() {
   const [service, setService] = useState<ServiceRow | null>(null);
   const [instructor, setInstructor] = useState<InstructorRow | null>(null);
 
-  const [date, setDate] = useState<Date | undefined>();
+  const [date, setDate] = useState<Date | undefined>(undefined);
   const [time, setTime] = useState<string | null>(null);
 
   // Transportation (OPTIONAL)
@@ -56,15 +91,48 @@ export default function Booking() {
     null,
   );
 
-  const location = useLocation();
+  // ----------------------------
+  // Restore draft on mount
+  // ----------------------------
+  useEffect(() => {
+    const draft = safeParseDraft(sessionStorage.getItem(DRAFT_KEY));
 
-  const toLocalISODate = (d: Date) => {
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, "0");
-    const day = String(d.getDate()).padStart(2, "0");
-    return `${y}-${m}-${day}`;
-  };
+    if (draft.dateISO) setDate(fromLocalISODate(draft.dateISO));
+    if (draft.time !== undefined) setTime(draft.time ?? null);
+    if (draft.transport !== undefined) setTransport(draft.transport ?? null);
+    if (typeof draft.pickupNotes === "string")
+      setPickupNotes(draft.pickupNotes);
+    if (draft.selectedRestaurant !== undefined)
+      setSelectedRestaurant(draft.selectedRestaurant ?? null);
+    if (draft.selectedPasalubong !== undefined)
+      setSelectedPasalubong(draft.selectedPasalubong ?? null);
+  }, []);
 
+  // ----------------------------
+  // Persist draft whenever changes happen
+  // ----------------------------
+  useEffect(() => {
+    const draft: BookingDraft = {
+      dateISO: date ? toLocalISODate(date) : undefined,
+      time,
+      transport,
+      pickupNotes,
+      selectedRestaurant,
+      selectedPasalubong,
+    };
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+  }, [
+    date,
+    time,
+    transport,
+    pickupNotes,
+    selectedRestaurant,
+    selectedPasalubong,
+  ]);
+
+  // ----------------------------
+  // Handle "pickTourStop" return
+  // ----------------------------
   useEffect(() => {
     const state = location.state as PickTourStopState;
     let pick = state?.pickTourStop ?? null;
@@ -91,6 +159,9 @@ export default function Booking() {
     }
 
     sessionStorage.removeItem("kv_pickTourStop");
+
+    // NOTE: Keep this, but it may cause route updates.
+    // Draft persistence above ensures date/time won’t disappear even if component remounts.
     navigate(location.pathname + location.search, {
       replace: true,
       state: null,
@@ -263,10 +334,15 @@ export default function Booking() {
           {/* Date */}
           <div className="mb-10">
             <h2 className="text-lg font-medium mb-4">1. Select a Date</h2>
+
             <Calendar
               mode="single"
+              required
               selected={date}
-              onSelect={(d) => d && setDate(d)}
+              onSelect={(d) => {
+                // required => d is always defined when clicking a day
+                setDate(d ?? undefined);
+              }}
               disabled={(d) => {
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
@@ -276,6 +352,15 @@ export default function Booking() {
               }}
               className="rounded-xl border p-4"
             />
+
+            {date ? (
+              <p className="mt-3 text-xs text-gray-500">
+                Selected:{" "}
+                <span className="font-medium text-gray-900">
+                  {toLocalISODate(date)}
+                </span>
+              </p>
+            ) : null}
           </div>
 
           {/* Time */}
@@ -285,6 +370,7 @@ export default function Booking() {
               {timeSlots.map((slot) => (
                 <button
                   key={slot}
+                  type="button"
                   onClick={() => setTime(slot)}
                   className={`
                     px-4 py-2 rounded-lg border text-sm transition
@@ -422,18 +508,15 @@ export default function Booking() {
                             </p>
                           )}
 
-                          {/* View details */}
                           <span
                             onClick={(e) => {
                               e.stopPropagation();
-
                               const returnTo =
                                 location.pathname + location.search;
                               sessionStorage.setItem(
                                 "kv_bookingReturnTo",
                                 returnTo,
                               );
-
                               navigate(`/tour-stop/${r.id}`, {
                                 state: { returnTo },
                               });
@@ -461,7 +544,6 @@ export default function Booking() {
               </div>
             </div>
 
-            {/* Divider */}
             <div className="h-px bg-gray-200 my-10" />
 
             {/* Pasalubong Center */}
@@ -499,18 +581,21 @@ export default function Booking() {
                             {p.name}
                           </p>
 
-                          {/* View details */}
+                          {p.description ? (
+                            <p className="mt-1 text-xs text-gray-600 line-clamp-2">
+                              {p.description}
+                            </p>
+                          ) : null}
+
                           <span
                             onClick={(e) => {
                               e.stopPropagation();
-
                               const returnTo =
                                 location.pathname + location.search;
                               sessionStorage.setItem(
                                 "kv_bookingReturnTo",
                                 returnTo,
                               );
-
                               navigate(`/tour-stop/${p.id}`, {
                                 state: { returnTo },
                               });
@@ -562,6 +647,9 @@ export default function Booking() {
                   placesToEatStopId: selectedRestaurant,
                   pasalubongStopId: selectedPasalubong,
                 });
+
+                // Clear draft after successful booking
+                sessionStorage.removeItem(DRAFT_KEY);
 
                 toast.success("Booking request sent!");
                 navigate(`/booking/requested/${booking.id}`);
