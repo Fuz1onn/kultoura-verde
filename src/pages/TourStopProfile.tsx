@@ -74,11 +74,11 @@ export default function TourStopProfile() {
       category: item.category,
     };
 
-    // ✅ Fallback in case router state is lost (auth guards, redirects, etc.)
+    // ✅ Most reliable way across redirects/guards
     sessionStorage.setItem("kv_pickTourStop", JSON.stringify(payload));
 
+    // ✅ Do NOT replace here — we want a new navigation entry so state/key updates properly
     navigate(returnTo ?? "/services", {
-      replace: true,
       state: { pickTourStop: payload },
     });
   };
@@ -178,7 +178,7 @@ export default function TourStopProfile() {
                   {item.address ? (
                     <div className="rounded-xl bg-gray-50 border px-4 py-3">
                       <div className="text-xs text-gray-500">Address</div>
-                      <div className="font-medium text-gray-900">
+                      <div className="font-medium text-gray-900 wrap-break-word whitespace-normal">
                         {item.address}
                       </div>
                     </div>
@@ -186,18 +186,18 @@ export default function TourStopProfile() {
 
                   <div className="grid sm:grid-cols-2 gap-2">
                     {item.mobile ? (
-                      <div className="rounded-xl bg-gray-50 border px-4 py-3">
+                      <div className="rounded-xl bg-gray-50 border px-4 py-3 min-w-0">
                         <div className="text-xs text-gray-500">Contact</div>
-                        <div className="font-medium text-gray-900">
+                        <div className="font-medium text-gray-900 wrap-break-word whitespace-normal">
                           {item.mobile}
                         </div>
                       </div>
                     ) : null}
 
                     {item.email ? (
-                      <div className="rounded-xl bg-gray-50 border px-4 py-3">
+                      <div className="rounded-xl bg-gray-50 border px-4 py-3 min-w-0">
                         <div className="text-xs text-gray-500">Email</div>
-                        <div className="font-medium text-gray-900">
+                        <div className="font-medium text-gray-900 wrap-break-word whitespace-normal">
                           {item.email}
                         </div>
                       </div>
